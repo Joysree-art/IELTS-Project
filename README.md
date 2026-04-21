@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # third_year_project
+=======
+# project_one
+>>>>>>> 6933b38 (Initial Flutter project)
 
 A new Flutter project.
 

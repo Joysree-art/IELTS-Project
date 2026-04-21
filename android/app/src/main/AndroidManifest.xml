@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
+<<<<<<< HEAD
         android:label="third_year_project"
+=======
+        android:label="project_one"
+>>>>>>> 6933b38 (Initial Flutter project)
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

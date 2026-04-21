@@ -22,8 +22,12 @@ class _RegisterPageState extends State<RegisterPage> {
   String? confirmError;
 
   bool isEmailValid(String email) {
+<<<<<<< HEAD
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
         .hasMatch(email);
+=======
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+>>>>>>> 6933b38 (Initial Flutter project)
   }
 
   Future<void> submit() async {
@@ -43,8 +47,11 @@ class _RegisterPageState extends State<RegisterPage> {
       ok = false;
     }
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> 6933b38 (Initial Flutter project)
     if (!isEmailValid(emailController.text)) {
       setState(() {
         emailError = "Invalid email";
@@ -77,9 +84,15 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       if (response.user != null) {
+<<<<<<< HEAD
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Account Created Successfully")),
         );
+=======
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Account Created Successfully")));
+>>>>>>> 6933b38 (Initial Flutter project)
 
         Navigator.pushReplacement(
           context,
@@ -87,9 +100,15 @@ class _RegisterPageState extends State<RegisterPage> {
         );
       }
     } catch (e) {
+<<<<<<< HEAD
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Registration Failed")),
       );
+=======
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Registration Failed")));
+>>>>>>> 6933b38 (Initial Flutter project)
     }
   }
 
@@ -131,10 +150,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       Text(
                         "Complete your registration to begin your IELTS journey",
                         textAlign: TextAlign.center,
+<<<<<<< HEAD
                         style: TextStyle(
                           color: Colors.black87,
                           fontSize: 13,
                         ),
+=======
+                        style: TextStyle(color: Colors.black87, fontSize: 13),
+>>>>>>> 6933b38 (Initial Flutter project)
                       ),
                       SizedBox(height: 15),
                       Text(
@@ -183,7 +206,11 @@ class _RegisterPageState extends State<RegisterPage> {
                                 color: Colors.black12,
                                 blurRadius: 10,
                                 offset: Offset(0, 5),
+<<<<<<< HEAD
                               )
+=======
+                              ),
+>>>>>>> 6933b38 (Initial Flutter project)
                             ],
                           ),
                           child: Column(
@@ -304,7 +331,16 @@ class _RegisterPageState extends State<RegisterPage> {
                                 child: Text(
                                   "Already have an account?\nThan please go to login page...",
                                   style: TextStyle(
+<<<<<<< HEAD
                                     color: const Color.fromARGB(255, 133, 53, 53),
+=======
+                                    color: const Color.fromARGB(
+                                      255,
+                                      133,
+                                      53,
+                                      53,
+                                    ),
+>>>>>>> 6933b38 (Initial Flutter project)
                                     fontSize: 13,
                                   ),
                                 ),
@@ -317,7 +353,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                     onPressed: goToLogin,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.red,
+<<<<<<< HEAD
                                       padding: EdgeInsets.symmetric(vertical: 12),
+=======
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+>>>>>>> 6933b38 (Initial Flutter project)
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(20),
                                       ),

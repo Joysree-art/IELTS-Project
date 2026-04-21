@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
     "name": "third_year_project",
     "short_name": "third_year_project",
+=======
+    "name": "project_one",
+    "short_name": "project_one",
+>>>>>>> 6933b38 (Initial Flutter project)
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
