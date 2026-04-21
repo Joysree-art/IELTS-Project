@@ -1,1 +1,22 @@
+import 'package:flutter/material.dart';
 
+class ReadingPage extends StatelessWidget {
+  const ReadingPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Reading"),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: const Center(
+        child: Text(
+          "Reading Page",
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+}
