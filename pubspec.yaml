@@ -1,5 +1,5 @@
 name: third_year_project
-description: A new Flutter project.
+description: A Flutter project for IELTS app
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -12,6 +12,7 @@ dependencies:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.5.0
 
 dev_dependencies:
   flutter_test:

@@ -33,8 +33,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.4"
-<<<<<<< HEAD
-=======
   args:
     dependency: transitive
     description:
@@ -43,7 +41,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.7.0"
->>>>>>> 6933b38 (Initial Flutter project)
   async:
     dependency: transitive
     description:
@@ -203,8 +200,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-<<<<<<< HEAD
-=======
   jni:
     dependency: transitive
     description:
@@ -221,7 +216,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.1"
->>>>>>> 6933b38 (Initial Flutter project)
   jwt_decode:
     dependency: transitive
     description:
@@ -302,8 +296,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.0.0"
-<<<<<<< HEAD
-=======
   package_config:
     dependency: transitive
     description:
@@ -312,7 +304,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
->>>>>>> 6933b38 (Initial Flutter project)
   path:
     dependency: transitive
     description:
@@ -333,17 +324,10 @@ packages:
     dependency: transitive
     description:
       name: path_provider_android
-<<<<<<< HEAD
-      sha256: "149441ca6e4f38193b2e004c0ca6376a3d11f51fa5a77552d8bd4d2b0c0912ba"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.2.23"
-=======
       sha256: "69cbd515a62b94d32a7944f086b2f82b4ac40a1d45bebfc00813a430ab2dabcd"
       url: "https://pub.dev"
     source: hosted
     version: "2.3.1"
->>>>>>> 6933b38 (Initial Flutter project)
   path_provider_foundation:
     dependency: transitive
     description:
@@ -694,9 +678,5 @@ packages:
     source: hosted
     version: "2.1.0"
 sdks:
-  dart: ">=3.9.2 <4.0.0"
-<<<<<<< HEAD
-  flutter: ">=3.35.0"
-=======
+  dart: ">=3.9.0 <4.0.0"
   flutter: ">=3.35.6"
->>>>>>> 6933b38 (Initial Flutter project)
