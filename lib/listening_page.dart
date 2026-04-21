@@ -14,20 +14,9 @@ class ListeningPage extends StatelessWidget {
       body: const Center(
         child: Text(
           "Listening Page",
-<<<<<<< HEAD
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-=======
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
->>>>>>> 6933b38 (Initial Flutter project)
         ),
       ),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6933b38 (Initial Flutter project)

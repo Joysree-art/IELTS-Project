@@ -14,20 +14,9 @@ class WritingPage extends StatelessWidget {
       body: const Center(
         child: Text(
           "Writing Page",
-<<<<<<< HEAD
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-=======
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
->>>>>>> 6933b38 (Initial Flutter project)
         ),
       ),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6933b38 (Initial Flutter project)

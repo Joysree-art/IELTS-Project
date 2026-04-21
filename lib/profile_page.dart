@@ -15,25 +15,11 @@ class ProfilePage extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: const [
-<<<<<<< HEAD
-            CircleAvatar(
-              radius: 50,
-              child: Icon(Icons.person, size: 50),
-            ),
-            SizedBox(height: 20),
-            Text(
-              "User Name",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-=======
             CircleAvatar(radius: 50, child: Icon(Icons.person, size: 50)),
             SizedBox(height: 20),
             Text(
               "User Name",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
->>>>>>> 6933b38 (Initial Flutter project)
             ),
             SizedBox(height: 10),
             Text("user@email.com"),
@@ -42,8 +28,4 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 6933b38 (Initial Flutter project)
