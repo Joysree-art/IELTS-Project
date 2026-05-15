@@ -4,6 +4,7 @@ import 'speaking_page.dart';
 import 'reading_page.dart';
 import 'listening_page.dart';
 import 'profile_page.dart';
+import 'analytics_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -12,6 +13,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
+
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -21,13 +23,14 @@ class HomePage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  /// TOP BAR
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        "IELTS Plus",
+                        "IELTSync",
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -41,12 +44,21 @@ class HomePage extends StatelessWidget {
                             ),
                           );
                         },
-                        child: const CircleAvatar(radius: 20),
+                        child: const CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.red,
+                          child: Icon(
+                            Icons.person,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
 
+                  const SizedBox(height: 25),
+
+                  /// SCORE CARDS
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
@@ -68,6 +80,7 @@ class HomePage extends StatelessWidget {
                           );
                         },
                       ),
+
                       ScoreCard(
                         title: "Speaking",
                         score: "7.0",
@@ -81,6 +94,7 @@ class HomePage extends StatelessWidget {
                           );
                         },
                       ),
+
                       ScoreCard(
                         title: "Reading",
                         score: "6.5",
@@ -94,6 +108,7 @@ class HomePage extends StatelessWidget {
                           );
                         },
                       ),
+
                       ScoreCard(
                         title: "Listening",
                         score: "6.5",
@@ -110,8 +125,9 @@ class HomePage extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 25),
 
+                  /// QUICK ACTION TITLE
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
@@ -122,39 +138,52 @@ class HomePage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Text("Customize", style: TextStyle(color: Colors.red)),
+                      Text(
+                        "Customize",
+                        style: TextStyle(color: Colors.red),
+                      ),
                     ],
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 15),
 
+                  /// ACTION TILES
                   ActionTile(
                     title: "Practice Writing",
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const WritingPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const WritingPage(),
+                        ),
                       );
                     },
                   ),
+
                   ActionTile(
                     title: "Start Speaking",
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const SpeakingPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const SpeakingPage(),
+                        ),
                       );
                     },
                   ),
+
                   ActionTile(
                     title: "Take Reading Test",
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => const ReadingPage()),
+                        MaterialPageRoute(
+                          builder: (_) => const ReadingPage(),
+                        ),
                       );
                     },
                   ),
+
                   ActionTile(
                     title: "Listening Practice",
                     onTap: () {
@@ -166,11 +195,57 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
+
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
         ),
+      ),
+
+      /// BOTTOM NAVIGATION
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0,
+        selectedItemColor: Colors.red,
+        unselectedItemColor: Colors.grey,
+
+        onTap: (index) {
+          if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AnalyticsPage(),
+              ),
+            );
+          }
+
+          else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const ProfilePage(),
+              ),
+            );
+          }
+        },
+
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: "Home",
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: "Analytics",
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Profile",
+          ),
+        ],
       ),
     );
   }
@@ -195,22 +270,33 @@ class ScoreCard extends StatelessWidget {
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
+
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
+
         child: Container(
           padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+          ),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              /// TOP ROW
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CircleAvatar(
                     backgroundColor: Colors.red.withOpacity(0.1),
-                    child: Icon(icon, color: Colors.red),
+                    child: Icon(
+                      icon,
+                      color: Colors.red,
+                    ),
                   ),
+
                   Text(
                     score,
                     style: const TextStyle(
@@ -220,17 +306,26 @@ class ScoreCard extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 10),
+
+              /// TITLE
               Text(title),
+
               const Spacer(),
+
+              /// PROGRESS BAR
               Container(
                 height: 4,
+
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(10),
                 ),
+
                 child: FractionallySizedBox(
                   widthFactor: 0.6,
+
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.red,
@@ -251,25 +346,40 @@ class ActionTile extends StatelessWidget {
   final String title;
   final VoidCallback onTap;
 
-  const ActionTile({super.key, required this.title, required this.onTap});
+  const ActionTile({
+    super.key,
+    required this.title,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
+
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
+
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
+
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 18,
+            ),
+
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(title),
-                const Icon(Icons.arrow_forward_ios, size: 16),
+
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                ),
               ],
             ),
           ),
