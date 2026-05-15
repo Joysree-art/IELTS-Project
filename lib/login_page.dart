@@ -61,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } on AuthException catch (e) {
       if (e.message.toLowerCase().contains('invalid login credentials')) {
-        _showSnackBar('Invalid password');
+        _showSnackBar('Invalid email or password');
       } else {
         _showSnackBar(e.message);
       }
@@ -74,9 +74,8 @@ class _LoginPageState extends State<LoginPage> {
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -102,7 +101,6 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   const SizedBox(height: 20),
 
-                  /// Logo
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -152,7 +150,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  /// Password
                   _inputField(
                     controller: _passwordController,
                     hint: 'Password',
@@ -161,8 +158,8 @@ class _LoginPageState extends State<LoginPage> {
                     suffix: IconButton(
                       icon: Icon(
                         _obscurePassword
-                            ? Icons.visibility
-                            : Icons.visibility_off,
+                            ? Icons.visibility_off // FIXED
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -174,7 +171,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 15),
 
-                  /// Remember me
                   Row(
                     children: [
                       Checkbox(
@@ -191,7 +187,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 20),
 
-                  /// Login button
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -219,7 +214,8 @@ class _LoginPageState extends State<LoginPage> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => RegisterPage()),
+                            MaterialPageRoute(
+                                builder: (_) => const RegisterPage()),
                           );
                         },
                         child: const Text(
@@ -255,7 +251,9 @@ class _LoginPageState extends State<LoginPage> {
         hintText: hint,
         prefixIcon: Icon(icon),
         suffixIcon: suffix,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+        ),
       ),
     );
   }
