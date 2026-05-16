@@ -68,11 +68,23 @@ class _RegisterPageState extends State<RegisterPage> {
       final response = await supabase.auth.signUp(
         email: emailController.text.trim(),
         password: passwordController.text,
+        data: {
+          'full_name': nameController.text.trim(),
+          'phone': '',
+        },
       );
 
       if (!mounted) return;
 
       if (response.user != null) {
+        await supabase.from('profiles').upsert({
+          'id': response.user!.id,
+          'full_name': nameController.text.trim(),
+          'email': emailController.text.trim(),
+          'phone': '',
+          'avatar_url': null,
+        });
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Account Created Successfully")),
         );
@@ -166,6 +178,7 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
           ),
+
           Expanded(
             child: Container(
               color: const Color(0xFFFFEBEE),
@@ -209,6 +222,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               const SizedBox(height: 25),
+
                               TextField(
                                 controller: nameController,
                                 decoration: InputDecoration(
@@ -220,7 +234,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 15),
+
                               TextField(
                                 controller: emailController,
                                 decoration: InputDecoration(
@@ -232,7 +248,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 15),
+
                               TextField(
                                 controller: passwordController,
                                 obscureText: obscurePass,
@@ -257,7 +275,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 15),
+
                               TextField(
                                 controller: confirmPasswordController,
                                 obscureText: obscureConfirm,
@@ -282,7 +302,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 25),
+
                               SizedBox(
                                 width: double.infinity,
                                 child: ElevatedButton(
@@ -305,7 +327,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 15),
+
                               const Center(
                                 child: Text(
                                   "Already have an account?\nThen please go to login page...",
@@ -316,7 +340,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                 ),
                               ),
+
                               const SizedBox(height: 10),
+
                               Center(
                                 child: SizedBox(
                                   width: 180,
