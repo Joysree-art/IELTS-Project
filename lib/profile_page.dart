@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'login_page.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -70,9 +71,12 @@ class _ProfilePageState extends State<ProfilePage> {
       } else {
         nameController.text =
             data['full_name'] ?? user.userMetadata?['full_name'] ?? '';
+
         phoneController.text =
             data['phone'] ?? user.userMetadata?['phone'] ?? '';
+
         emailController.text = data['email'] ?? user.email ?? '';
+
         avatarUrl = data['avatar_url'];
       }
     } catch (e) {
@@ -148,6 +152,7 @@ class _ProfilePageState extends State<ProfilePage> {
       });
 
       await _saveProfile();
+
       _showMessage("Profile picture updated");
     } catch (e) {
       _showMessage("Image upload failed: $e");
@@ -178,7 +183,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
     if (!mounted) return;
 
-    Navigator.popUntil(context, (route) => route.isFirst);
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginPage(),
+      ),
+      (route) => false,
+    );
   }
 
   void _showMessage(String message) {
@@ -204,10 +215,12 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF6B7280)),
+          labelStyle: const TextStyle(
+            color: Color(0xFF6B7280),
+          ),
           prefixIcon: Icon(
             icon,
-            color: const Color(0xFFE60046),
+            color: const Color(0xFFC62828),
             size: 20,
           ),
           filled: true,
@@ -226,7 +239,10 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFFFCCD8), width: 2),
+            borderSide: const BorderSide(
+              color: Color(0xFFEF9A9A),
+              width: 2,
+            ),
           ),
         ),
       ),
@@ -239,10 +255,22 @@ class _ProfilePageState extends State<ProfilePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8FA),
+
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFF8FA),
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF111827)),
+
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+
+        iconTheme: const IconThemeData(
+          color: Color(0xFF111827),
+        ),
+
         title: const Text(
           "Profile",
           style: TextStyle(
@@ -251,44 +279,60 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ),
       ),
+
       body: isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFE60046)),
+              child: CircularProgressIndicator(
+                color: Color(0xFFC62828),
+              ),
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(18),
+
               child: Center(
                 child: Container(
-                  width: screenWidth > 700 ? 430 : screenWidth * 0.55,
+                  width: screenWidth > 700
+                      ? 430
+                      : screenWidth * 0.55,
+
                   padding: const EdgeInsets.all(22),
+
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE60046),
+                    color: const Color(0xFFC62828),
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: const Color(0xFFE60046)),
+
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFE60046).withOpacity(0.22),
+                        color: const Color(0xFFC62828)
+                            .withOpacity(0.25),
                         blurRadius: 22,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
+
                   child: Column(
                     children: [
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
                         margin: const EdgeInsets.only(bottom: 20),
+
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFFF8FA),
+                          color: const Color(0xFFFFEBEE),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFFFCCD8)),
+
+                          border: Border.all(
+                            color: const Color(0xFFEF9A9A),
+                          ),
                         ),
+
                         child: const Text(
                           "Keep your IELTSync profile updated to track your IELTS practice progress, saved scores, and personal learning history accurately.",
                           textAlign: TextAlign.center,
+
                           style: TextStyle(
-                            color: Color(0xFFB42350),
+                            color: Color(0xFF8E0000),
                             fontSize: 13,
                             height: 1.4,
                             fontWeight: FontWeight.w500,
@@ -301,32 +345,40 @@ class _ProfilePageState extends State<ProfilePage> {
                           CircleAvatar(
                             radius: 58,
                             backgroundColor: Colors.white,
+
                             backgroundImage: avatarUrl != null
                                 ? NetworkImage(avatarUrl!)
                                 : null,
+
                             child: avatarUrl == null
                                 ? const Icon(
                                     Icons.person,
                                     size: 65,
-                                    color: Color(0xFFE60046),
+                                    color: Color(0xFFC62828),
                                   )
                                 : null,
                           ),
+
                           Positioned(
                             right: 0,
                             bottom: 0,
+
                             child: InkWell(
                               onTap: _pickAndUploadImage,
+
                               child: Container(
                                 padding: const EdgeInsets.all(10),
+
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE60046),
+                                  color: const Color(0xFFC62828),
                                   shape: BoxShape.circle,
+
                                   border: Border.all(
                                     color: Colors.white,
                                     width: 3,
                                   ),
                                 ),
+
                                 child: const Icon(
                                   Icons.camera_alt,
                                   color: Colors.white,
@@ -342,42 +394,55 @@ class _ProfilePageState extends State<ProfilePage> {
 
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
+
                         children: [
                           SizedBox(
                             width: 120,
+
                             child: TextButton.icon(
                               onPressed: _pickAndUploadImage,
+
                               icon: const Icon(
                                 Icons.upload,
                                 size: 18,
                                 color: Colors.white,
                               ),
+
                               label: const Text(
                                 "Update",
-                                style: TextStyle(color: Colors.white),
+                                style: TextStyle(
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                           ),
+
                           Container(
                             width: 1,
                             height: 22,
                             color: Colors.white54,
                           ),
+
                           SizedBox(
                             width: 110,
+
                             child: TextButton.icon(
                               onPressed: avatarUrl == null
                                   ? null
                                   : _deleteProfilePicture,
+
                               icon: Icon(
                                 Icons.delete_outline,
                                 size: 18,
+
                                 color: avatarUrl == null
                                     ? Colors.white54
                                     : Colors.white,
                               ),
+
                               label: Text(
                                 "Delete",
+
                                 style: TextStyle(
                                   color: avatarUrl == null
                                       ? Colors.white54
@@ -415,35 +480,45 @@ class _ProfilePageState extends State<ProfilePage> {
                       SizedBox(
                         width: double.infinity,
                         height: 46,
+
                         child: ElevatedButton.icon(
-                          onPressed: isSaving ? null : _saveProfile,
+                          onPressed: isSaving
+                              ? null
+                              : _saveProfile,
+
                           icon: const Icon(
                             Icons.save_outlined,
-                            color: Color(0xFFE60046),
+                            color: Color(0xFFC62828),
                             size: 20,
                           ),
+
                           label: isSaving
                               ? const SizedBox(
                                   height: 22,
                                   width: 22,
+
                                   child: CircularProgressIndicator(
-                                    color: Color(0xFFE60046),
+                                    color: Color(0xFFC62828),
                                     strokeWidth: 2,
                                   ),
                                 )
                               : const Text(
                                   "Save Profile",
+
                                   style: TextStyle(
-                                    color: Color(0xFFE60046),
+                                    color: Color(0xFFC62828),
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
+
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFFE60046),
+                            foregroundColor: const Color(0xFFC62828),
+
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
+
                             elevation: 0,
                           ),
                         ),
@@ -454,23 +529,31 @@ class _ProfilePageState extends State<ProfilePage> {
                       SizedBox(
                         width: double.infinity,
                         height: 46,
+
                         child: OutlinedButton.icon(
                           onPressed: _logout,
+
                           icon: const Icon(
                             Icons.logout,
                             size: 20,
                             color: Colors.white,
                           ),
+
                           label: const Text(
                             "Logout",
-                            style: TextStyle(color: Colors.white),
+                            style: TextStyle(
+                              color: Colors.white,
+                            ),
                           ),
+
                           style: OutlinedButton.styleFrom(
                             foregroundColor: Colors.white,
+
                             side: const BorderSide(
                               color: Colors.white,
                               width: 1.4,
                             ),
+
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
