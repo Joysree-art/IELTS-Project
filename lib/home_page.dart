@@ -212,7 +212,7 @@ class HomePage extends StatelessWidget {
 
         onTap: (index) {
           if (index == 1) {
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => const AnalyticsPage(),
@@ -221,7 +221,7 @@ class HomePage extends StatelessWidget {
           }
 
           else if (index == 2) {
-            Navigator.pushReplacement(
+            Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => const ProfilePage(),
