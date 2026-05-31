@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'writing_task1_page.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'models/writing_question.dart';
+
+// ─── Entry: Type Selection Screen ────────────────────────────────────────────
 
 class WritingTestPage extends StatefulWidget {
   const WritingTestPage({super.key});
@@ -10,38 +13,336 @@ class WritingTestPage extends StatefulWidget {
 }
 
 class _WritingTestPageState extends State<WritingTestPage> {
-  final TextEditingController task1Controller = TextEditingController();
-  final TextEditingController task2Controller = TextEditingController();
+  String selectedTask1Type = 'bar';
+  String selectedTask2Type = 'opinion';
+  bool isLoading = false;
+
+  final supabase = Supabase.instance.client;
+
+  final List<Map<String, dynamic>> task1Types = [
+    {'value': 'bar',     'label': 'Bar Chart',  'icon': Icons.bar_chart},
+    {'value': 'pie',     'label': 'Pie Chart',  'icon': Icons.pie_chart},
+    {'value': 'line',    'label': 'Line Graph', 'icon': Icons.show_chart},
+    {'value': 'table',   'label': 'Table',      'icon': Icons.table_chart},
+    {'value': 'diagram', 'label': 'Diagram',    'icon': Icons.account_tree_outlined},
+    {'value': 'map',     'label': 'Map',        'icon': Icons.map_outlined},
+    {'value': 'process', 'label': 'Process',    'icon': Icons.linear_scale},
+    {'value': 'other',   'label': 'Other',      'icon': Icons.insert_chart},
+  ];
+
+  final List<Map<String, dynamic>> task2Types = [
+    {'value': 'opinion',                  'label': 'Opinion Essay'},
+    {'value': 'discussion',               'label': 'Discussion'},
+    {'value': 'problem-solution',         'label': 'Problem & Solution'},
+    {'value': 'advantages-disadvantages', 'label': 'Advantages & Disadvantages'},
+    {'value': 'two-part',                 'label': 'Two-Part Question'},
+    {'value': 'other',                    'label': 'Other'},
+  ];
+
+  Future<void> _startTest() async {
+    setState(() => isLoading = true);
+
+    try {
+      // Fetch all task1 questions of selected type, pick random
+      final task1Data = await supabase
+          .from('writing_questions')
+          .select()
+          .eq('task_type', 'task1')
+          .eq('question_type', selectedTask1Type);
+
+      final task2Data = await supabase
+          .from('writing_questions')
+          .select()
+          .eq('task_type', 'task2')
+          .eq('question_type', selectedTask2Type);
+
+      if ((task1Data as List).isEmpty) {
+        _showSnack('No Task 1 questions found for "$selectedTask1Type". Try another type.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      if ((task2Data as List).isEmpty) {
+        _showSnack('No Task 2 questions found for "$selectedTask2Type". Try another type.');
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // Pick random
+      task1Data.shuffle();
+      task2Data.shuffle();
+
+      final task1Q = WritingQuestion.fromMap(task1Data.first);
+      final task2Q = WritingQuestion.fromMap(task2Data.first);
+
+      if (!mounted) return;
+
+      setState(() => isLoading = false);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _WritingTestExamPage(
+            task1Question: task1Q,
+            task2Question: task2Q,
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() => isLoading = false);
+      _showSnack('Error loading questions: $e');
+    }
+  }
+
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFDF7F9),
+      appBar: AppBar(
+        title: const Text('Writing Test'),
+        backgroundColor: Colors.red,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Info banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.timer_outlined, color: Colors.white, size: 28),
+                  SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Full Writing Test',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold)),
+                        SizedBox(height: 4),
+                        Text('60 minutes · Task 1 + Task 2',
+                            style: TextStyle(color: Colors.white70, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 28),
+
+            // Task 1 type picker
+            _SectionLabel(
+              number: '1',
+              title: 'Select Task 1 Type',
+              subtitle: 'A random question of this type will be selected',
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: task1Types.map((type) {
+                final selected = selectedTask1Type == type['value'];
+                return GestureDetector(
+                  onTap: () =>
+                      setState(() => selectedTask1Type = type['value']),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected ? Colors.red : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected ? Colors.red : Colors.grey.shade300,
+                        width: selected ? 2 : 1,
+                      ),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.25),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(type['icon'] as IconData,
+                            size: 18,
+                            color: selected ? Colors.white : Colors.grey),
+                        const SizedBox(width: 6),
+                        Text(
+                          type['label'] as String,
+                          style: TextStyle(
+                            color: selected ? Colors.white : Colors.black87,
+                            fontWeight: selected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 28),
+
+            // Task 2 type picker
+            _SectionLabel(
+              number: '2',
+              title: 'Select Task 2 Type',
+              subtitle: 'A random question of this type will be selected',
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: task2Types.map((type) {
+                final selected = selectedTask2Type == type['value'];
+                return GestureDetector(
+                  onTap: () =>
+                      setState(() => selectedTask2Type = type['value']),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: selected ? Colors.red : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: selected ? Colors.red : Colors.grey.shade300,
+                        width: selected ? 2 : 1,
+                      ),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: Colors.red.withOpacity(0.25),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Text(
+                      type['label'] as String,
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.black87,
+                        fontWeight:
+                            selected ? FontWeight.bold : FontWeight.normal,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+
+            const SizedBox(height: 36),
+
+            // Start button
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton.icon(
+                onPressed: isLoading ? null : _startTest,
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.play_arrow, color: Colors.white),
+                label: Text(
+                  isLoading ? 'Loading Questions...' : 'Start Test',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18)),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            const Center(
+              child: Text(
+                'Questions are fetched randomly from the question bank.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Exam Screen ──────────────────────────────────────────────────────────────
+
+class _WritingTestExamPage extends StatefulWidget {
+  final WritingQuestion task1Question;
+  final WritingQuestion task2Question;
+
+  const _WritingTestExamPage({
+    required this.task1Question,
+    required this.task2Question,
+  });
+
+  @override
+  State<_WritingTestExamPage> createState() => _WritingTestExamPageState();
+}
+
+class _WritingTestExamPageState extends State<_WritingTestExamPage> {
+  final task1Controller = TextEditingController();
+  final task2Controller = TextEditingController();
 
   Timer? timer;
   int secondsLeft = 3600;
   int secondsSpent = 0;
-
-  bool canType = true;
   bool submitted = false;
+  bool isSaving = false;
+  bool canType = true;
 
-  final String task1Question =
-      "The bar chart below shows the number of students studying English in four countries. Summarize the information by selecting and reporting the main features.";
-
-  final String task2Question =
-      "Some people believe technology improves education, while others think it reduces students' creativity. Discuss both views and give your opinion.";
+  final supabase = Supabase.instance.client;
 
   @override
   void initState() {
     super.initState();
-
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (secondsLeft <= 0) {
         timer?.cancel();
-
-        setState(() {
-          canType = false;
-        });
-
+        setState(() => canType = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Time is over! Please submit your writing."),
-          ),
+          const SnackBar(content: Text('Time is up! Please submit now.')),
         );
       } else {
         setState(() {
@@ -52,31 +353,6 @@ class _WritingTestPageState extends State<WritingTestPage> {
     });
   }
 
-  String formatTime(int totalSeconds) {
-    final minutes = (totalSeconds ~/ 60).toString().padLeft(2, '0');
-    final seconds = (totalSeconds % 60).toString().padLeft(2, '0');
-    return "$minutes:$seconds";
-  }
-
-  int wordCount(String text) {
-    final cleanText = text.trim();
-    if (cleanText.isEmpty) return 0;
-    return cleanText.split(RegExp(r'\s+')).length;
-  }
-
-  void submitTest() {
-    timer?.cancel();
-
-    setState(() {
-      submitted = true;
-      canType = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Writing test submitted successfully")),
-    );
-  }
-
   @override
   void dispose() {
     timer?.cancel();
@@ -85,109 +361,195 @@ class _WritingTestPageState extends State<WritingTestPage> {
     super.dispose();
   }
 
+  String _formatTime(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  int _wordCount(String text) {
+    final t = text.trim();
+    if (t.isEmpty) return 0;
+    return t.split(RegExp(r'\s+')).length;
+  }
+
+  Color get _timerColor {
+    if (secondsLeft > 1200) return Colors.green;
+    if (secondsLeft > 300) return Colors.orange;
+    return Colors.red;
+  }
+
+  Future<void> _submitTest() async {
+    timer?.cancel();
+    setState(() {
+      isSaving = true;
+      submitted = true;
+      canType = false;
+    });
+
+    try {
+      final userId = supabase.auth.currentUser?.id;
+
+      await supabase.from('writing_test_results').insert({
+        'user_id': userId,
+        'task1_question_id': widget.task1Question.id,
+        'task2_question_id': widget.task2Question.id,
+        'task1_answer': task1Controller.text.trim(),
+        'task2_answer': task2Controller.text.trim(),
+        'task1_word_count': _wordCount(task1Controller.text),
+        'task2_word_count': _wordCount(task2Controller.text),
+        'time_spent_seconds': secondsSpent,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Test submitted and saved!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Save failed: $e')),
+        );
+      }
+    }
+
+    setState(() => isSaving = false);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final task1Words = wordCount(task1Controller.text);
-    final task2Words = wordCount(task2Controller.text);
+    final t1Words = _wordCount(task1Controller.text);
+    final t2Words = _wordCount(task2Controller.text);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFDF7F9),
       appBar: AppBar(
-        title: const Text("Writing Test"),
         backgroundColor: Colors.red,
         foregroundColor: Colors.white,
+        title: const Text('Writing Test'),
+        automaticallyImplyLeading: !submitted,
+        actions: [
+          // Timer chip
+          Container(
+            margin: const EdgeInsets.only(right: 14),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.timer_outlined, color: _timerColor, size: 18),
+                const SizedBox(width: 5),
+                Text(
+                  _formatTime(secondsLeft),
+                  style: TextStyle(
+                    color: _timerColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 90),
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 100),
         child: Column(
           children: [
+            // Progress summary bar
             Container(
-              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.red,
+                color: const Color(0xFF111827),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    "Time Left: ${formatTime(secondsLeft)}",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    "Time Spent: ${formatTime(secondsSpent)}",
-                    style: const TextStyle(color: Colors.white),
-                  ),
+                  _StatPill(
+                      label: 'Task 1',
+                      value: '$t1Words words',
+                      color: t1Words >= 150
+                          ? Colors.green
+                          : Colors.orange),
+                  const SizedBox(width: 10),
+                  _StatPill(
+                      label: 'Task 2',
+                      value: '$t2Words words',
+                      color: t2Words >= 250
+                          ? Colors.green
+                          : Colors.orange),
+                  const SizedBox(width: 10),
+                  _StatPill(
+                      label: 'Spent',
+                      value: _formatTime(secondsSpent),
+                      color: Colors.blue),
                 ],
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
 
-            _TestBox(
-              title: "Writing Task 1",
-              question: task1Question,
-              wordCount: task1Words,
+            // Task 1
+            _TaskBox(
+              taskLabel: 'Task 1',
+              question: widget.task1Question,
               controller: task1Controller,
               canType: canType,
-              showChart: true,
+              wordCount: t1Words,
+              minWords: 150,
               onChanged: () => setState(() {}),
             ),
 
             const SizedBox(height: 22),
 
-            _TestBox(
-              title: "Writing Task 2",
-              question: task2Question,
-              wordCount: task2Words,
+            // Task 2
+            _TaskBox(
+              taskLabel: 'Task 2',
+              question: widget.task2Question,
               controller: task2Controller,
               canType: canType,
-              showChart: false,
+              wordCount: t2Words,
+              minWords: 250,
               onChanged: () => setState(() {}),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 26),
 
+            // Submit button
             SizedBox(
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: submitted ? null : submitTest,
+                onPressed: submitted || isSaving ? null : _submitTest,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
-                  disabledBackgroundColor: Colors.grey,
+                  disabledBackgroundColor: Colors.grey.shade300,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+                      borderRadius: BorderRadius.circular(18)),
                 ),
-                child: Text(
-                  submitted ? "Submitted" : "Submit Full Test",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: isSaving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        submitted ? 'Submitted ✓' : 'Submit Test',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold),
+                      ),
               ),
             ),
 
+            // Result card
             if (submitted) ...[
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: Text(
-                  "Submitted Successfully\nTask 1 Words: $task1Words\nTask 2 Words: $task2Words\nTotal Time Spent: ${formatTime(secondsSpent)}",
-                  style: const TextStyle(color: Colors.white, height: 1.6),
-                ),
+              const SizedBox(height: 22),
+              _ResultCard(
+                t1Words: t1Words,
+                t2Words: t2Words,
+                timeSpent: secondsSpent,
               ),
             ],
           ],
@@ -197,27 +559,31 @@ class _WritingTestPageState extends State<WritingTestPage> {
   }
 }
 
-class _TestBox extends StatelessWidget {
-  final String title;
-  final String question;
-  final int wordCount;
+// ─── Task Box ─────────────────────────────────────────────────────────────────
+
+class _TaskBox extends StatelessWidget {
+  final String taskLabel;
+  final WritingQuestion question;
   final TextEditingController controller;
   final bool canType;
-  final bool showChart;
+  final int wordCount;
+  final int minWords;
   final VoidCallback onChanged;
 
-  const _TestBox({
-    required this.title,
+  const _TaskBox({
+    required this.taskLabel,
     required this.question,
-    required this.wordCount,
     required this.controller,
     required this.canType,
-    required this.showChart,
+    required this.wordCount,
+    required this.minWords,
     required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
+    final meetsMin = wordCount >= minWords;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -225,46 +591,116 @@ class _TestBox extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: Colors.red.shade100),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.red,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          // Label + word count
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(taskLabel,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13)),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: meetsMin
+                      ? Colors.green.shade50
+                      : Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: meetsMin ? Colors.green : Colors.orange,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  '$wordCount / $minWords words',
+                  style: TextStyle(
+                    color: meetsMin ? Colors.green : Colors.orange,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          // Chart image (Task 1 only)
+          if (question.imageUrl.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              constraints: const BoxConstraints(maxHeight: 1000),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  question.imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (ctx, child, progress) {
+                    if (progress == null) return child;
+                    return const SizedBox(
+                      height: 140,
+                      child: Center(
+                        child: CircularProgressIndicator(color: Colors.red),
+                      ),
+                    );
+                  },
+                  errorBuilder: (ctx, err, _) => const SizedBox(
+                    height: 80,
+                    child: Center(
+                      child: Icon(Icons.broken_image,
+                          color: Colors.grey, size: 32),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+
+          // Question text
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF7F8),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.red.shade100),
+            ),
+            child: Text(
+              question.questionText,
+              style: const TextStyle(fontSize: 15, height: 1.6),
             ),
           ),
 
           const SizedBox(height: 14),
 
-          if (showChart)
-            SizedBox(
-              height: 210,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: BarChartPainter(),
-              ),
-            ),
-
-          if (showChart) const SizedBox(height: 14),
-
-          Text(
-            question,
-            style: const TextStyle(fontSize: 16, height: 1.5),
-          ),
-
-          const SizedBox(height: 12),
-
-          Text(
-            "Words: $wordCount",
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-
-          const SizedBox(height: 10),
-
+          // Answer field
           TextField(
             controller: controller,
             enabled: canType,
@@ -272,16 +708,205 @@ class _TestBox extends StatelessWidget {
             onChanged: (_) => onChanged(),
             decoration: InputDecoration(
               hintText: canType
-                  ? "Write your answer here..."
-                  : "Time is over. You cannot type anymore.",
+                  ? 'Write your answer here...'
+                  : 'Time is up. Submission closed.',
               filled: true,
-              fillColor: const Color(0xFFF9FAFB),
+              fillColor: canType ? Colors.white : Colors.grey.shade50,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.red.shade100),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: Colors.red.shade100),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    const BorderSide(color: Colors.red, width: 2),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ─── Result Card ──────────────────────────────────────────────────────────────
+
+class _ResultCard extends StatelessWidget {
+  final int t1Words;
+  final int t2Words;
+  final int timeSpent;
+
+  const _ResultCard({
+    required this.t1Words,
+    required this.t2Words,
+    required this.timeSpent,
+  });
+
+  String _formatTime(int s) {
+    final m = (s ~/ 60).toString().padLeft(2, '0');
+    final sec = (s % 60).toString().padLeft(2, '0');
+    return '$m:$sec';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111827),
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Test Summary',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              _SummaryBox(
+                  title: 'Task 1', value: '$t1Words words'),
+              const SizedBox(width: 10),
+              _SummaryBox(
+                  title: 'Task 2', value: '$t2Words words'),
+              const SizedBox(width: 10),
+              _SummaryBox(
+                  title: 'Time', value: _formatTime(timeSpent)),
+            ],
+          ),
+          const SizedBox(height: 18),
+          const Text('AI Feedback',
+              style: TextStyle(
+                  color: Color(0xFF38BDF8),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          const Text(
+            'AI writing feedback will be available here once the feedback API is integrated.',
+            style: TextStyle(color: Colors.white70, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Small Widgets ────────────────────────────────────────────────────────────
+
+class _SectionLabel extends StatelessWidget {
+  final String number;
+  final String title;
+  final String subtitle;
+
+  const _SectionLabel({
+    required this.number,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CircleAvatar(
+          radius: 16,
+          backgroundColor: Colors.red,
+          child: Text(number,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 17, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  style:
+                      const TextStyle(fontSize: 13, color: Colors.grey)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatPill extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StatPill(
+      {required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F2937),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14)),
+            const SizedBox(height: 3),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white54, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SummaryBox extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _SummaryBox({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1F2937),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: const TextStyle(
+                    color: Color(0xFF38BDF8),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white70, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
