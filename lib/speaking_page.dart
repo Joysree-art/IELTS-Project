@@ -23,6 +23,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
 
   Timer? _timer;
 
+  bool _isLoadingTopics = true;
   bool _isPreparing = false;
   bool _isRecording = false;
   bool _isAnalyzing = false;
@@ -34,6 +35,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
 
   String _selectedPart = "Part 1";
   String _topic = "";
+  String _cuePoints = "";
   String _transcript = "";
 
   double _bandScore = 0.0;
@@ -43,33 +45,11 @@ class _SpeakingPageState extends State<SpeakingPage> {
   String _pronunciation = "";
   String _overallFeedback = "";
 
+  List<Map<String, dynamic>> _topics = [];
   List<Map<String, dynamic>> _history = [];
 
-  final Map<String, List<String>> _topics = {
-    "Part 1": [
-      "Do you like reading books?",
-      "What do you usually do in your free time?",
-      "Do you prefer studying alone or with friends?",
-      "What kind of music do you like?",
-    ],
-    "Part 2": [
-      "Describe a memorable trip you had.",
-      "Describe a person who inspires you.",
-      "Describe your favorite book.",
-      "Describe a place you would like to visit.",
-    ],
-    "Part 3": [
-      "Why do people like travelling?",
-      "How has technology changed education?",
-      "What makes a good leader?",
-      "Is online learning better than classroom learning?",
-    ],
-  };
-
   int _getSpeakingSeconds() {
-    if (_selectedPart == "Part 2") {
-      return 120;
-    }
+    if (_selectedPart == "Part 2") return 120;
     return 300;
   }
 
@@ -87,8 +67,8 @@ class _SpeakingPageState extends State<SpeakingPage> {
   @override
   void initState() {
     super.initState();
-    _generateTopic();
     _speakSeconds = _getSpeakingSeconds();
+    _fetchTopics();
     _fetchHistory();
   }
 
@@ -99,9 +79,41 @@ class _SpeakingPageState extends State<SpeakingPage> {
     super.dispose();
   }
 
+  Future<void> _fetchTopics() async {
+    setState(() => _isLoadingTopics = true);
+
+    try {
+      final data = await supabase
+          .from('speaking_topics')
+          .select()
+          .eq('part', _selectedPart)
+          .order('created_at', ascending: false);
+
+      _topics = List<Map<String, dynamic>>.from(data);
+
+      _generateTopic();
+    } catch (e) {
+      _showMessage("Failed to load speaking topics: $e");
+      _topic = "No topic found. Please ask admin to add speaking topics.";
+      _cuePoints = "";
+    }
+
+    if (mounted) {
+      setState(() => _isLoadingTopics = false);
+    }
+  }
+
   void _generateTopic() {
-    final list = _topics[_selectedPart]!;
-    _topic = list[Random().nextInt(list.length)];
+    if (_topics.isEmpty) {
+      _topic = "No topic found. Please ask admin to add speaking topics.";
+      _cuePoints = "";
+      return;
+    }
+
+    final selected = _topics[Random().nextInt(_topics.length)];
+
+    _topic = selected['topic']?.toString() ?? '';
+    _cuePoints = selected['cue_points']?.toString() ?? '';
   }
 
   void _changePart(String part) {
@@ -110,8 +122,9 @@ class _SpeakingPageState extends State<SpeakingPage> {
     setState(() {
       _selectedPart = part;
       _resetAll();
-      _generateTopic();
     });
+
+    _fetchTopics();
   }
 
   void _resetAll() {
@@ -132,6 +145,11 @@ class _SpeakingPageState extends State<SpeakingPage> {
   }
 
   Future<void> _startPreparation() async {
+    if (_topic.startsWith("No topic found")) {
+      _showMessage("No topic available for $_selectedPart");
+      return;
+    }
+
     setState(() {
       _resetAll();
     });
@@ -452,6 +470,32 @@ class _SpeakingPageState extends State<SpeakingPage> {
     );
   }
 
+  Widget _cuePointBox() {
+    if (_selectedPart != "Part 2" || _cuePoints.trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 14),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFEEF3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFCCD8)),
+      ),
+      child: Text(
+        "You should say:\n$_cuePoints",
+        style: const TextStyle(
+          color: Color(0xFFB42350),
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final timerText = _isPreparing
@@ -518,17 +562,29 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   children: [
                     _sectionTitle(Icons.topic_outlined, "Your Topic"),
                     const SizedBox(height: 14),
-                    Text(
-                      _topic,
-                      style: const TextStyle(
-                        fontSize: 19,
-                        color: Color(0xFF111827),
-                        height: 1.4,
-                      ),
-                    ),
+                    _isLoadingTopics
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFFE60046),
+                            ),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _topic,
+                                style: const TextStyle(
+                                  fontSize: 19,
+                                  color: Color(0xFF111827),
+                                  height: 1.4,
+                                ),
+                              ),
+                              _cuePointBox(),
+                            ],
+                          ),
                     const SizedBox(height: 16),
                     TextButton.icon(
-                      onPressed: _isRecording || _isPreparing
+                      onPressed: _isRecording || _isPreparing || _isLoadingTopics
                           ? null
                           : () {
                               setState(() {
@@ -591,7 +647,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
-                          onPressed: _startPreparation,
+                          onPressed: _isLoadingTopics ? null : _startPreparation,
                           icon: const Icon(
                             Icons.play_arrow,
                             color: Color(0xFFE60046),

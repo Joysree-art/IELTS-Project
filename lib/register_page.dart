@@ -113,6 +113,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'email': emailController.text.trim(),
           'phone': '',
           'avatar_url': null,
+          'role': 'user',
         });
 
         showMessage("Account Created Successfully");
