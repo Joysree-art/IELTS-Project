@@ -1,5 +1,7 @@
 import 'home_page.dart';
 import 'register_page.dart';
+import 'admin/admin_dashboard.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -52,11 +54,25 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (response.user != null) {
+        final profile = await _supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', response.user!.id)
+            .maybeSingle();
+
+        if (!mounted) return;
+
+        final role = profile?['role'] ?? 'user';
+
         _showSnackBar('Login successful');
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomePage()),
+          MaterialPageRoute(
+            builder: (_) => role == 'admin'
+                ? const AdminDashboardPage()
+                : const HomePage(),
+          ),
         );
       }
     } on AuthException catch (e) {
@@ -141,7 +157,6 @@ class _LoginPageState extends State<LoginPage> {
 
                   const SizedBox(height: 30),
 
-                  /// Email
                   _inputField(
                     controller: _emailController,
                     hint: 'Email',
@@ -158,7 +173,7 @@ class _LoginPageState extends State<LoginPage> {
                     suffix: IconButton(
                       icon: Icon(
                         _obscurePassword
-                            ? Icons.visibility_off // FIXED
+                            ? Icons.visibility_off
                             : Icons.visibility,
                       ),
                       onPressed: () {
@@ -200,7 +215,13 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: _isLoading
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text('Login', style: TextStyle(fontSize: 18)),
+                          : const Text(
+                              'Login',
+                              style: TextStyle(
+                                fontSize: 18,
+                                color: Colors.white,
+                              ),
+                            ),
                     ),
                   ),
 
@@ -215,7 +236,8 @@ class _LoginPageState extends State<LoginPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (_) => const RegisterPage()),
+                              builder: (_) => const RegisterPage(),
+                            ),
                           );
                         },
                         child: const Text(

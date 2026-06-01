@@ -17,14 +17,42 @@ class _RegisterPageState extends State<RegisterPage> {
 
   bool obscurePass = true;
   bool obscureConfirm = true;
+  bool isLoading = false;
 
   String? nameError;
   String? emailError;
   String? passwordError;
   String? confirmError;
 
+  static const bgColor = Color(0xFFF5F6FA);
+  static const primaryColor = Color(0xFFFF3B30);
+  static const lightPrimary = Color(0xFFFFE8E6);
+  static const textColor = Color(0xFF202124);
+  static const subTextColor = Color(0xFF6B7280);
+  static const snackBarColor = Color(0xFFE5E7EB);
+
   bool isEmailValid(String email) {
     return RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        backgroundColor: snackBarColor,
+        behavior: SnackBarBehavior.floating,
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
   Future<void> submit() async {
@@ -62,6 +90,8 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
+    setState(() => isLoading = true);
+
     try {
       final supabase = Supabase.instance.client;
 
@@ -85,9 +115,7 @@ class _RegisterPageState extends State<RegisterPage> {
           'avatar_url': null,
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Account Created Successfully")),
-        );
+        showMessage("Account Created Successfully");
 
         Navigator.pushReplacement(
           context,
@@ -96,10 +124,11 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (!mounted) return;
+      showMessage("Registration Failed: $e");
+    }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Registration Failed: $e")));
+    if (mounted) {
+      setState(() => isLoading = false);
     }
   }
 
@@ -107,6 +136,118 @@ class _RegisterPageState extends State<RegisterPage> {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+  }
+
+  Widget inputField({
+    required String label,
+    required IconData icon,
+    required TextEditingController controller,
+    String? errorText,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      style: const TextStyle(
+        fontSize: 14,
+        color: textColor,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: errorText,
+        labelStyle: const TextStyle(color: subTextColor),
+        prefixIcon: Icon(
+          icon,
+          color: primaryColor,
+          size: 20,
+        ),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: bgColor,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: primaryColor,
+            width: 1.5,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: primaryColor,
+            width: 1.2,
+          ),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(
+            color: primaryColor,
+            width: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget outlineButton({
+    required String text,
+    required IconData icon,
+    required VoidCallback? onPressed,
+    bool loading = false,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: loading ? null : onPressed,
+        icon: loading
+            ? const SizedBox.shrink()
+            : Icon(
+                icon,
+                size: 20,
+                color: primaryColor,
+              ),
+        label: loading
+            ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(
+                  color: primaryColor,
+                  strokeWidth: 2,
+                ),
+              )
+            : Text(
+                text,
+                style: const TextStyle(
+                  color: primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: primaryColor,
+          side: const BorderSide(
+            color: primaryColor,
+            width: 1.4,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+      ),
     );
   }
 
@@ -122,262 +263,178 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Row(
-        children: [
-          Expanded(
-            child: Container(
-              color: Colors.red,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.all(25),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: const Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        "SUCCESS STARTS HERE",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.red,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      Text(
-                        "Complete your registration to begin your IELTS journey",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.black87, fontSize: 13),
-                      ),
-                      SizedBox(height: 15),
-                      Text(
-                        "Practice daily\nImprove your English\nAchieve your IELTS dream",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.black87,
-                          fontSize: 14,
-                          height: 1.5,
-                        ),
-                      ),
-                      SizedBox(height: 15),
-                      Text(
-                        "“Small progress every day leads to big results.”",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+      backgroundColor: bgColor,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = constraints.maxWidth;
 
-          Expanded(
-            child: Container(
-              color: const Color(0xFFFFEBEE),
-              child: SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Center(
-                      child: SingleChildScrollView(
-                        child: Container(
-                          width: constraints.maxWidth > 500
-                              ? 380
-                              : constraints.maxWidth * 0.9,
-                          padding: const EdgeInsets.all(22),
+            final double cardWidth =
+                (screenWidth * 0.35).clamp(300.0, 500.0);
+
+            final bool isSmallScreen = screenWidth <= 320;
+
+            return Center(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 12 : 18,
+                  vertical: 18,
+                ),
+                child: SizedBox(
+                  width: cardWidth,
+                  child: Container(
+                    padding: EdgeInsets.all(isSmallScreen ? 18 : 22),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 18,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 10,
-                                offset: Offset(0, 5),
-                              ),
-                            ],
+                            color: lightPrimary,
+                            borderRadius: BorderRadius.circular(18),
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                "IELTS Preparation System",
+                              Text(
+                                "SUCCESS STARTS HERE",
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 22,
+                                  color: primaryColor,
+                                  fontSize: isSmallScreen ? 18 : 20,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              const SizedBox(height: 5),
+                              const SizedBox(height: 8),
                               const Text(
-                                "Improve your English skills with practice and tests",
+                                "Complete your registration to begin your IELTS journey.",
+                                textAlign: TextAlign.center,
                                 style: TextStyle(
+                                  color: primaryColor,
                                   fontSize: 13,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const SizedBox(height: 25),
-
-                              TextField(
-                                controller: nameController,
-                                decoration: InputDecoration(
-                                  labelText: "Name",
-                                  errorText: nameError,
-                                  prefixIcon: const Icon(Icons.person),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 15),
-
-                              TextField(
-                                controller: emailController,
-                                decoration: InputDecoration(
-                                  labelText: "Email",
-                                  errorText: emailError,
-                                  prefixIcon: const Icon(Icons.email),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 15),
-
-                              TextField(
-                                controller: passwordController,
-                                obscureText: obscurePass,
-                                decoration: InputDecoration(
-                                  labelText: "Password",
-                                  errorText: passwordError,
-                                  prefixIcon: const Icon(Icons.lock),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      obscurePass
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        obscurePass = !obscurePass;
-                                      });
-                                    },
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 15),
-
-                              TextField(
-                                controller: confirmPasswordController,
-                                obscureText: obscureConfirm,
-                                decoration: InputDecoration(
-                                  labelText: "Confirm Password",
-                                  errorText: confirmError,
-                                  prefixIcon: const Icon(Icons.lock_outline),
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      obscureConfirm
-                                          ? Icons.visibility_off
-                                          : Icons.visibility,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        obscureConfirm = !obscureConfirm;
-                                      });
-                                    },
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 25),
-
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: submit,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 15,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    "Sign Up",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 15),
-
-                              const Center(
-                                child: Text(
-                                  "Already have an account?\nThen please go to login page...",
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Color.fromARGB(255, 133, 53, 53),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              Center(
-                                child: SizedBox(
-                                  width: 180,
-                                  child: ElevatedButton(
-                                    onPressed: goToLogin,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.red,
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                    ),
-                                    child: const Text(
-                                      "Login Page",
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
+                                  height: 1.4,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ),
-                    );
-                  },
+                        const SizedBox(height: 24),
+                        Text(
+                          "Create Account",
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 22 : 24,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          "Improve your English skills with practice and tests",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: subTextColor,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        inputField(
+                          label: "Name",
+                          icon: Icons.person_outline,
+                          controller: nameController,
+                          errorText: nameError,
+                        ),
+                        const SizedBox(height: 14),
+                        inputField(
+                          label: "Email",
+                          icon: Icons.email_outlined,
+                          controller: emailController,
+                          errorText: emailError,
+                        ),
+                        const SizedBox(height: 14),
+                        inputField(
+                          label: "Password",
+                          icon: Icons.lock_outline,
+                          controller: passwordController,
+                          errorText: passwordError,
+                          obscureText: obscurePass,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePass
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: subTextColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                obscurePass = !obscurePass;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        inputField(
+                          label: "Confirm Password",
+                          icon: Icons.lock_outline,
+                          controller: confirmPasswordController,
+                          errorText: confirmError,
+                          obscureText: obscureConfirm,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscureConfirm
+                                  ? Icons.visibility_off_outlined
+                                  : Icons.visibility_outlined,
+                              color: subTextColor,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                obscureConfirm = !obscureConfirm;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        outlineButton(
+                          text: "Sign Up",
+                          icon: Icons.person_add_alt_1_outlined,
+                          onPressed: submit,
+                          loading: isLoading,
+                        ),
+                        const SizedBox(height: 18),
+                        const Center(
+                          child: Text(
+                            "Already have an account?",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: subTextColor,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        outlineButton(
+                          text: "Login Page",
+                          icon: Icons.login_outlined,
+                          onPressed: goToLogin,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
