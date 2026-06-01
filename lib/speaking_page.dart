@@ -30,7 +30,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
   bool _hasResult = false;
 
   int _prepSeconds = 60;
-  int _speakSeconds = 60;
+  int _speakSeconds = 300;
 
   String _selectedPart = "Part 1";
   String _topic = "";
@@ -66,10 +66,29 @@ class _SpeakingPageState extends State<SpeakingPage> {
     ],
   };
 
+  int _getSpeakingSeconds() {
+    if (_selectedPart == "Part 2") {
+      return 120;
+    }
+    return 300;
+  }
+
+  ButtonStyle _ashButtonStyle() {
+    return ElevatedButton.styleFrom(
+      backgroundColor: const Color(0xFFE5E7EB),
+      foregroundColor: const Color(0xFFE60046),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(30),
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
     _generateTopic();
+    _speakSeconds = _getSpeakingSeconds();
     _fetchHistory();
   }
 
@@ -102,7 +121,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
     _isAnalyzing = false;
     _hasResult = false;
     _prepSeconds = 60;
-    _speakSeconds = _selectedPart == "Part 1" ? 60 : 120;
+    _speakSeconds = _getSpeakingSeconds();
     _transcript = "";
     _bandScore = 0.0;
     _fluency = "";
@@ -115,6 +134,14 @@ class _SpeakingPageState extends State<SpeakingPage> {
   Future<void> _startPreparation() async {
     setState(() {
       _resetAll();
+    });
+
+    if (_selectedPart != "Part 2") {
+      await _startRecording();
+      return;
+    }
+
+    setState(() {
       _isPreparing = true;
     });
 
@@ -158,7 +185,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
       _isRecording = true;
       _transcript = "";
       _hasResult = false;
-      _speakSeconds = _selectedPart == "Part 1" ? 60 : 120;
+      _speakSeconds = _getSpeakingSeconds();
     });
 
     _speech.listen(
@@ -316,23 +343,23 @@ class _SpeakingPageState extends State<SpeakingPage> {
   }
 
   void _goToPage(int index) {
-  if (index == 0) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const HomePage()),
-    );
-  } else if (index == 1) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AnalyticsPage()),
-    );
-  } else {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ProfilePage()),
-    );
+    if (index == 0) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const HomePage()),
+      );
+    } else if (index == 1) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const AnalyticsPage()),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfilePage()),
+      );
+    }
   }
-}
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -447,9 +474,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   color: Color(0xFF111827),
                 ),
               ),
-
               const SizedBox(height: 18),
-
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -460,7 +485,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   border: Border.all(color: const Color(0xFFFFCCD8)),
                 ),
                 child: const Text(
-                  "Speak for 1-2 minutes on the given topic. Your fluency, pronunciation, vocabulary, and grammar will be analyzed.",
+                  "Part 1: 5 minutes. Part 2: 1 minute preparation + 2 minutes speaking. Part 3: 5 minutes discussion.",
                   style: TextStyle(
                     fontSize: 15,
                     color: Color(0xFFB42350),
@@ -468,7 +493,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   ),
                 ),
               ),
-
               _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,7 +512,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   ],
                 ),
               ),
-
               _card(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,7 +545,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   ],
                 ),
               ),
-
               _card(
                 child: Column(
                   children: [
@@ -545,9 +567,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
                         fontSize: 16,
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
                     Container(
                       height: 155,
                       width: 155,
@@ -565,9 +585,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
                         color: const Color(0xFFE60046),
                       ),
                     ),
-
                     const SizedBox(height: 28),
-
                     if (!_isPreparing && !_isRecording)
                       SizedBox(
                         width: double.infinity,
@@ -576,71 +594,61 @@ class _SpeakingPageState extends State<SpeakingPage> {
                           onPressed: _startPreparation,
                           icon: const Icon(
                             Icons.play_arrow,
-                            color: Colors.white,
+                            color: Color(0xFFE60046),
                           ),
-                          label: const Text(
-                            "Start Preparation",
-                            style: TextStyle(
-                              color: Colors.white,
+                          label: Text(
+                            _selectedPart == "Part 2"
+                                ? "Start Preparation"
+                                : "Start Speaking",
+                            style: const TextStyle(
+                              color: Color(0xFFE60046),
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE60046),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
+                          style: _ashButtonStyle(),
                         ),
                       ),
-
                     if (_isPreparing)
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
                           onPressed: _skipPreparation,
-                          icon: const Icon(Icons.mic, color: Colors.white),
+                          icon: const Icon(
+                            Icons.mic,
+                            color: Color(0xFFE60046),
+                          ),
                           label: const Text(
                             "Skip & Start Recording",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFFE60046),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE60046),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
+                          style: _ashButtonStyle(),
                         ),
                       ),
-
                     if (_isRecording)
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
                           onPressed: _stopRecording,
-                          icon: const Icon(Icons.stop, color: Colors.white),
+                          icon: const Icon(
+                            Icons.stop,
+                            color: Color(0xFFE60046),
+                          ),
                           label: const Text(
                             "Stop Recording",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: Color(0xFFE60046),
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE60046),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
+                          style: _ashButtonStyle(),
                         ),
                       ),
-
                     if (_hasResult)
                       TextButton.icon(
                         onPressed: () {
@@ -657,7 +665,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   ],
                 ),
               ),
-
               if (_isAnalyzing)
                 _card(
                   child: const Column(
@@ -671,7 +678,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                     ],
                   ),
                 ),
-
               if (_transcript.isNotEmpty)
                 _card(
                   child: Column(
@@ -690,7 +696,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                     ],
                   ),
                 ),
-
               if (_hasResult)
                 _card(
                   child: Column(
@@ -772,7 +777,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
                     ],
                   ),
                 ),
-
               if (_history.isNotEmpty)
                 _card(
                   child: Column(
@@ -817,7 +821,6 @@ class _SpeakingPageState extends State<SpeakingPage> {
           ),
         ),
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         selectedItemColor: const Color(0xFFE60046),
