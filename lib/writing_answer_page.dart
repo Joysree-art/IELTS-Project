@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/gemini_service.dart';
 
 class WritingAnswerPage extends StatefulWidget {
   final String title;
   final String question;
   final String chartType;
   final String imageUrl;
+  final String questionId;
 
   const WritingAnswerPage({
     super.key,
@@ -13,6 +16,7 @@ class WritingAnswerPage extends StatefulWidget {
     required this.question,
     required this.chartType,
     required this.imageUrl,
+    required this.questionId,
   });
 
   @override
@@ -20,17 +24,24 @@ class WritingAnswerPage extends StatefulWidget {
 }
 
 class _WritingAnswerPageState extends State<WritingAnswerPage> {
-  final TextEditingController answerController = TextEditingController();
+  final answerController = TextEditingController();
+  final supabase = Supabase.instance.client;
 
   Timer? timer;
   int secondsSpent = 0;
+
   bool submitted = false;
+  bool isChecking = false;
+
+  Map<String, dynamic>? feedbackData;
 
   @override
   void initState() {
     super.initState();
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() => secondsSpent++);
+      if (mounted && !submitted) {
+        setState(() => secondsSpent++);
+      }
     });
   }
 
@@ -49,12 +60,76 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
   bool get hasChart =>
       widget.chartType.isNotEmpty && widget.imageUrl.isNotEmpty;
 
-  void submitWriting() {
+  String get taskType {
+    return widget.title.toLowerCase().contains('task 1') ? 'task1' : 'task2';
+  }
+
+  Future<void> submitWriting() async {
+    final answer = answerController.text.trim();
+
+    if (answer.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please write your answer first')),
+      );
+      return;
+    }
+
     timer?.cancel();
-    setState(() => submitted = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Writing submitted successfully')),
-    );
+
+    setState(() {
+      isChecking = true;
+      submitted = true;
+      feedbackData = null;
+    });
+
+    try {
+      final parsedFeedback = await GeminiService.checkWriting(
+        module: taskType == 'task1' ? 'writing_task_1' : 'writing_task_2',
+        question: widget.question,
+        answer: answer,
+        imageUrl: widget.imageUrl,
+        chartType: widget.chartType,
+      );
+
+      final band =
+          double.tryParse(parsedFeedback['band_score'].toString()) ?? 0.0;
+
+      final user = supabase.auth.currentUser;
+
+      await supabase.from('writing_practice_results').insert({
+        'user_id': user?.id,
+        'question_id': widget.questionId.isEmpty ? null : widget.questionId,
+        'task_type': taskType,
+        'question_text': widget.question,
+        'image_url': widget.imageUrl,
+        'answer': answer,
+        'word_count': wordCount,
+        'time_spent_seconds': secondsSpent,
+        'band_score': band,
+        'feedback': parsedFeedback,
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        feedbackData = parsedFeedback;
+        isChecking = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Writing checked successfully')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        isChecking = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('AI feedback failed: $e')),
+      );
+    }
   }
 
   @override
@@ -66,6 +141,8 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
 
   @override
   Widget build(BuildContext context) {
+    final tips = feedbackData?['improvement_tips'];
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDF7F9),
       appBar: AppBar(
@@ -78,7 +155,6 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Chart image from Supabase bucket
             if (hasChart) ...[
               Container(
                 width: double.infinity,
@@ -93,8 +169,8 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                   child: Image.network(
                     widget.imageUrl,
                     fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
+                    loadingBuilder: (context, child, progress) {
+                      if (progress == null) return child;
                       return const SizedBox(
                         height: 140,
                         child: Center(
@@ -102,21 +178,10 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                         ),
                       );
                     },
-                    errorBuilder: (context, error, stackTrace) => const SizedBox(
+                    errorBuilder: (_, __, ___) => const SizedBox(
                       height: 100,
                       child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.broken_image,
-                                color: Colors.grey, size: 36),
-                            SizedBox(height: 6),
-                            Text(
-                              'Chart image could not be loaded',
-                              style: TextStyle(color: Colors.grey, fontSize: 13),
-                            ),
-                          ],
-                        ),
+                        child: Text('Chart image could not be loaded'),
                       ),
                     ),
                   ),
@@ -125,7 +190,6 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
               const SizedBox(height: 18),
             ],
 
-            // Question text box
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
@@ -142,42 +206,25 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
 
             const SizedBox(height: 18),
 
-            // Timer + word count row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, color: Colors.red, size: 18),
-                    const SizedBox(width: 5),
-                    Text(
-                      formatTime(secondsSpent),
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Time: ${formatTime(secondsSpent)}',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                Row(
-                  children: [
-                    const Icon(Icons.text_fields, size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Words: $wordCount',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF374151),
-                      ),
-                    ),
-                  ],
+                Text(
+                  'Words: $wordCount',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
 
             const SizedBox(height: 14),
 
-            // Answer text field
             TextField(
               controller: answerController,
               enabled: !submitted,
@@ -189,27 +236,17 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(color: Colors.red.shade100),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: BorderSide(color: Colors.red.shade100),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
-                  borderSide: const BorderSide(color: Colors.red, width: 2),
                 ),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Submit button
             SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: submitted ? null : submitWriting,
+                onPressed: submitted || isChecking ? null : submitWriting,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   disabledBackgroundColor: Colors.grey.shade300,
@@ -217,18 +254,19 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                     borderRadius: BorderRadius.circular(18),
                   ),
                 ),
-                child: Text(
-                  submitted ? 'Submitted' : 'Submit Writing',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                child: isChecking
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : Text(
+                        submitted ? 'Submitted' : 'Submit Writing',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
               ),
             ),
 
-            // Feedback placeholder after submission
             if (submitted) ...[
               const SizedBox(height: 20),
               Container(
@@ -238,32 +276,95 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                   color: const Color(0xFF111827),
                   borderRadius: BorderRadius.circular(18),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Writing Feedback',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        _StatBox(title: 'Words', value: '$wordCount'),
-                        const SizedBox(width: 10),
-                        _StatBox(title: 'Time', value: formatTime(secondsSpent)),
-                      ],
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'AI feedback from the API will appear here after submission.',
-                      style: TextStyle(color: Colors.white70, height: 1.5),
-                    ),
-                  ],
-                ),
+                child: isChecking
+                    ? const Center(
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(color: Colors.white),
+                            SizedBox(height: 12),
+                            Text(
+                              'Gemini is checking your writing...',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ],
+                        ),
+                      )
+                    : feedbackData == null
+                        ? const Text(
+                            'No feedback available.',
+                            style: TextStyle(color: Colors.white),
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'AI Writing Feedback',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 14),
+                              Row(
+                                children: [
+                                  _StatBox(
+                                    title: 'Band',
+                                    value:
+                                        feedbackData!['band_score'].toString(),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  _StatBox(title: 'Words', value: '$wordCount'),
+                                  const SizedBox(width: 10),
+                                  _StatBox(
+                                    title: 'Time',
+                                    value: formatTime(secondsSpent),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              _FeedbackText(
+                                title: 'Overall Feedback',
+                                text: feedbackData!['overall_feedback'] ?? '',
+                              ),
+                              _FeedbackText(
+                                title: 'Grammar',
+                                text: feedbackData!['grammar_feedback'] ?? '',
+                              ),
+                              _FeedbackText(
+                                title: 'Vocabulary',
+                                text: feedbackData!['vocabulary_feedback'] ?? '',
+                              ),
+                              _FeedbackText(
+                                title: 'Coherence',
+                                text: feedbackData!['coherence_feedback'] ?? '',
+                              ),
+                              if (tips is List) ...[
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Improvement Tips',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                ...tips.map(
+                                  (tip) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Text(
+                                      '• $tip',
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        height: 1.4,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
               ),
             ],
 
@@ -279,7 +380,10 @@ class _StatBox extends StatelessWidget {
   final String title;
   final String value;
 
-  const _StatBox({required this.title, required this.value});
+  const _StatBox({
+    required this.title,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -307,6 +411,43 @@ class _StatBox extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FeedbackText extends StatelessWidget {
+  final String title;
+  final String text;
+
+  const _FeedbackText({
+    required this.title,
+    required this.text,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            text,
+            style: const TextStyle(color: Colors.white70, height: 1.5),
+          ),
+        ],
       ),
     );
   }

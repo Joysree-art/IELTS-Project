@@ -207,10 +207,11 @@ class _QuestionCard extends StatelessWidget {
           context,
           MaterialPageRoute(
             builder: (_) => WritingAnswerPage(
-              title: 'Writing Task 1',
-              question: question.questionText,
-              chartType: question.questionType,
-              imageUrl: question.imageUrl,
+            title: 'Writing Task 1',
+            question: question.questionText,
+            chartType: question.questionType,
+            imageUrl: question.imageUrl,
+            questionId: question.id,
             ),
           ),
         ),

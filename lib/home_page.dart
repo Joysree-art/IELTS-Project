@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'writing_page.dart';
 import 'speaking_page.dart';
 import 'reading_page.dart';
@@ -6,14 +8,58 @@ import 'listening_page.dart';
 import 'profile_page.dart';
 import 'analytics_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  String? avatarUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    loadProfileImage();
+  }
+
+  Future<void> loadProfileImage() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final data = await Supabase.instance.client
+          .from('profiles')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (!mounted) return;
+
+      setState(() {
+        avatarUrl = data?['avatar_url'];
+      });
+    } catch (e) {
+      debugPrint('Failed to load profile image: $e');
+    }
+  }
+
+  Future<void> openProfilePage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfilePage()),
+    );
+
+    loadProfileImage();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final hasAvatar = avatarUrl != null && avatarUrl!.isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
-
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -36,21 +82,18 @@ class HomePage extends StatelessWidget {
                       ),
 
                       GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ProfilePage(),
-                            ),
-                          );
-                        },
-                        child: const CircleAvatar(
-                          radius: 20,
-                          backgroundColor: Colors.red,
-                          child: Icon(
-                            Icons.person,
-                            color: Colors.white,
-                          ),
+                        onTap: openProfilePage,
+                        child: CircleAvatar(
+                          radius: 22,
+                          backgroundColor: Colors.red.shade100,
+                          backgroundImage:
+                              hasAvatar ? NetworkImage(avatarUrl!) : null,
+                          child: !hasAvatar
+                              ? const Icon(
+                                  Icons.person,
+                                  color: Colors.red,
+                                )
+                              : null,
                         ),
                       ),
                     ],
@@ -80,7 +123,6 @@ class HomePage extends StatelessWidget {
                           );
                         },
                       ),
-
                       ScoreCard(
                         title: "Speaking",
                         score: "7.0",
@@ -94,7 +136,6 @@ class HomePage extends StatelessWidget {
                           );
                         },
                       ),
-
                       ScoreCard(
                         title: "Reading",
                         score: "6.5",
@@ -108,7 +149,6 @@ class HomePage extends StatelessWidget {
                           );
                         },
                       ),
-
                       ScoreCard(
                         title: "Listening",
                         score: "6.5",
@@ -128,9 +168,9 @@ class HomePage extends StatelessWidget {
                   const SizedBox(height: 25),
 
                   /// QUICK ACTION TITLE
-                  Row(
+                  const Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
+                    children: [
                       Text(
                         "Quick Actions",
                         style: TextStyle(
@@ -147,7 +187,6 @@ class HomePage extends StatelessWidget {
 
                   const SizedBox(height: 15),
 
-                  /// ACTION TILES
                   ActionTile(
                     title: "Practice Writing",
                     onTap: () {
@@ -159,7 +198,6 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
-
                   ActionTile(
                     title: "Start Speaking",
                     onTap: () {
@@ -171,7 +209,6 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
-
                   ActionTile(
                     title: "Take Reading Test",
                     onTap: () {
@@ -183,7 +220,6 @@ class HomePage extends StatelessWidget {
                       );
                     },
                   ),
-
                   ActionTile(
                     title: "Listening Practice",
                     onTap: () {
@@ -204,43 +240,29 @@ class HomePage extends StatelessWidget {
         ),
       ),
 
-      /// BOTTOM NAVIGATION
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         selectedItemColor: Colors.red,
         unselectedItemColor: Colors.grey,
-
-        onTap: (index) {
+        onTap: (index) async {
           if (index == 1) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const AnalyticsPage(),
-              ),
+              MaterialPageRoute(builder: (_) => const AnalyticsPage()),
             );
-          }
-
-          else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const ProfilePage(),
-              ),
-            );
+          } else if (index == 2) {
+            await openProfilePage();
           }
         },
-
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
             label: "Home",
           ),
-
           BottomNavigationBarItem(
             icon: Icon(Icons.bar_chart),
             label: "Analytics",
           ),
-
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             label: "Profile",
@@ -270,33 +292,21 @@ class ScoreCard extends StatelessWidget {
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
-
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
-
         child: Container(
           padding: const EdgeInsets.all(14),
-
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-          ),
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// TOP ROW
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CircleAvatar(
                     backgroundColor: Colors.red.withOpacity(0.1),
-                    child: Icon(
-                      icon,
-                      color: Colors.red,
-                    ),
+                    child: Icon(icon, color: Colors.red),
                   ),
-
                   Text(
                     score,
                     style: const TextStyle(
@@ -306,26 +316,18 @@ class ScoreCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               const SizedBox(height: 10),
-
-              /// TITLE
               Text(title),
-
               const Spacer(),
-
-              /// PROGRESS BAR
               Container(
                 height: 4,
-
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius: BorderRadius.circular(10),
                 ),
-
                 child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
                   widthFactor: 0.6,
-
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.red,
@@ -356,30 +358,22 @@ class ActionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-
       child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 18,
             ),
-
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(title),
-
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                ),
+                const Icon(Icons.arrow_forward_ios, size: 16),
               ],
             ),
           ),
