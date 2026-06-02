@@ -107,13 +107,7 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       if (response.user != null) {
-        await supabase.from('profiles').upsert({
-          'id': response.user!.id,
-          'full_name': nameController.text.trim(),
-          'email': emailController.text.trim(),
-          'phone': '',
-          'avatar_url': null,
-        });
+        
 
         showMessage("Account Created Successfully");
 

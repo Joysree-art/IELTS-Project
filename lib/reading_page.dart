@@ -14,10 +14,24 @@ class ReadingPage extends StatefulWidget {
 }
 
 class _ReadingPageState extends State<ReadingPage> {
+  final supabase = Supabase.instance.client;
+
+  bool isLoading = true;
   bool submitted = false;
   bool isSaving = false;
 
-  List<int?> selectedAnswers = [null, null, null];
+  String passageId = '';
+  String passageTitle = '';
+  String passageText = '';
+  String difficulty = '';
+
+  String currentTitle = 'IELTS Reading';
+  String? currentPracticeType;
+  List<String>? currentQuestionTypes;
+
+  List<Map<String, dynamic>> allQuestions = [];
+  List<Map<String, dynamic>> questions = [];
+  List<String?> selectedAnswers = [];
 
   final Set<int> bookmarkedQuestions = {};
   final TextEditingController noteController = TextEditingController();
@@ -25,79 +39,160 @@ class _ReadingPageState extends State<ReadingPage> {
   Timer? countdownTimer;
   Duration duration = const Duration(minutes: 60);
 
-  final List<Map<String, dynamic>> questions = [
-    {
-      "question": "What is the main purpose of the passage?",
-      "type": "Main Idea",
-      "options": [
-        "To explain how technology is changing education",
-        "To criticize students for using online tools",
-        "To describe the history of schools",
-        "To prove that teachers are no longer needed",
-      ],
-      "answer": 0,
-    },
-    {
-      "question": "According to paragraph 2, what role do teachers still play?",
-      "type": "Detail",
-      "options": [
-        "They completely stop students from using technology",
-        "They guide students and explain ideas clearly",
-        "They only check exam papers",
-        "They make learning slower",
-      ],
-      "answer": 1,
-    },
-    {
-      "question": "What does the passage suggest about future education?",
-      "type": "Inference",
-      "options": [
-        "All students will study the same lessons",
-        "Books will disappear completely",
-        "Learning may become more personalized",
-        "Teachers will be replaced immediately",
-      ],
-      "answer": 2,
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
-    startTimer();
+    _fetchReadingTest();
+    _startTimer();
   }
 
-  void startTimer() {
-    countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      final seconds = duration.inSeconds - 1;
+  Future<void> _fetchReadingTest() async {
+    setState(() {
+      isLoading = true;
+      submitted = false;
+      questions = [];
+      allQuestions = [];
+      selectedAnswers = [];
+      duration = const Duration(minutes: 60);
+    });
 
-      if (seconds < 0) {
-        countdownTimer?.cancel();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Time is up!")),
-        );
-      } else {
-        setState(() {
-          duration = Duration(seconds: seconds);
-        });
+    try {
+      final passage = await supabase
+          .from('reading_passages')
+          .select()
+          .eq('is_published', true)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .single();
+
+      final questionData = await supabase
+          .from('reading_questions')
+          .select()
+          .eq('passage_id', passage['id'])
+          .order('question_order', ascending: true);
+
+      final optionData = await supabase
+          .from('reading_options')
+          .select()
+          .order('option_order', ascending: true);
+
+      final questionList = List<Map<String, dynamic>>.from(questionData);
+      final optionList = List<Map<String, dynamic>>.from(optionData);
+
+      for (final q in questionList) {
+        q['reading_options'] = optionList
+            .where((option) => option['question_id'] == q['id'])
+            .toList();
       }
+
+      setState(() {
+        passageId = passage['id'].toString();
+        passageTitle = passage['title']?.toString() ?? '';
+        passageText = passage['passage_text']?.toString() ?? '';
+        difficulty = passage['difficulty']?.toString() ?? '';
+        allQuestions = questionList;
+        _applyQuestionFilter();
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() => isLoading = false);
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load reading test: $e')),
+      );
+    }
+  }
+
+  void _applyQuestionFilter() {
+    if (currentPracticeType == null) {
+      questions = [];
+      selectedAnswers = [];
+      submitted = false;
+      bookmarkedQuestions.clear();
+      return;
+    }
+
+    if (currentQuestionTypes == null || currentQuestionTypes!.isEmpty) {
+      questions = List<Map<String, dynamic>>.from(allQuestions);
+    } else {
+      final allowed = currentQuestionTypes!.map((e) => _normalize(e)).toSet();
+
+      questions = allQuestions.where((q) {
+        final type = _normalize(q['question_type'].toString());
+        return allowed.contains(type);
+      }).toList();
+    }
+
+    selectedAnswers = List<String?>.filled(questions.length, null);
+    submitted = false;
+    bookmarkedQuestions.clear();
+  }
+
+  void _changeMode({
+    required String title,
+    required String practiceType,
+    List<String>? questionTypes,
+  }) {
+    setState(() {
+      currentTitle = title;
+      currentPracticeType = practiceType;
+      currentQuestionTypes = questionTypes;
+      duration = const Duration(minutes: 60);
+      _applyQuestionFilter();
+    });
+
+    _startTimer();
+  }
+
+  void _startTimer() {
+    countdownTimer?.cancel();
+
+    countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted || submitted || isLoading || currentPracticeType == null) {
+        return;
+      }
+
+      if (duration.inSeconds <= 0) {
+        countdownTimer?.cancel();
+        setState(() => submitted = true);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Time is up!')),
+        );
+        return;
+      }
+
+      setState(() {
+        duration = Duration(seconds: duration.inSeconds - 1);
+      });
     });
   }
 
-  String formatTime(Duration d) {
+  String _formatTime(Duration d) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(d.inMinutes.remainder(60));
-    final seconds = twoDigits(d.inSeconds.remainder(60));
-    return "$minutes:$seconds";
+    return '${twoDigits(d.inMinutes.remainder(60))}:${twoDigits(d.inSeconds.remainder(60))}';
   }
 
-  int get answeredCount => selectedAnswers.where((e) => e != null).length;
+  String _normalize(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  int get answeredCount {
+    return selectedAnswers
+        .where((answer) => answer != null && answer.trim().isNotEmpty)
+        .length;
+  }
 
   int get correctCount {
     int count = 0;
 
     for (int i = 0; i < questions.length; i++) {
-      if (selectedAnswers[i] == questions[i]["answer"]) {
+      final userAnswer = _normalize(selectedAnswers[i] ?? '');
+      final correctAnswer =
+          _normalize(questions[i]['correct_answer'].toString());
+
+      if (userAnswer.isNotEmpty && userAnswer == correctAnswer) {
         count++;
       }
     }
@@ -105,17 +200,17 @@ class _ReadingPageState extends State<ReadingPage> {
     return count;
   }
 
-  double get progress => answeredCount / questions.length;
+  double get progress {
+    if (questions.isEmpty) return 0;
+    return answeredCount / questions.length;
+  }
 
   int get percentage {
+    if (questions.isEmpty) return 0;
     return ((correctCount / questions.length) * 100).round();
   }
 
   double get bandScore {
-    return _bandScoreFromPercentage(percentage);
-  }
-
-  double _bandScoreFromPercentage(int percentage) {
     if (percentage >= 85) return 8.0;
     if (percentage >= 70) return 7.0;
     if (percentage >= 55) return 6.0;
@@ -123,18 +218,17 @@ class _ReadingPageState extends State<ReadingPage> {
     return 4.5;
   }
 
-  String _bandPrediction(int percentage) {
-    return _bandScoreFromPercentage(percentage).toStringAsFixed(1);
-  }
-
   Future<void> _saveReadingScoreToSupabase() async {
-    setState(() {
-      isSaving = true;
-    });
+    setState(() => isSaving = true);
 
     try {
-      await Supabase.instance.client.from('reading_scores').insert({
+      final userId = supabase.auth.currentUser?.id;
+
+      await supabase.from('reading_scores').insert({
+        'user_id': userId,
         'module': 'reading',
+        'practice_type': currentPracticeType ?? 'unknown',
+        'passage_id': passageId,
         'correct_answers': correctCount,
         'total_questions': questions.length,
         'percentage': percentage,
@@ -142,21 +236,17 @@ class _ReadingPageState extends State<ReadingPage> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      print("Reading score saved: $bandScore");
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Reading score saved successfully")),
+        const SnackBar(content: Text('Reading score saved successfully')),
       );
     } catch (e) {
-      print("SAVE ERROR: $e");
-
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to save score: $e")),
+        SnackBar(content: Text('Failed to save score: $e')),
       );
     } finally {
-      setState(() {
-        isSaving = false;
-      });
+      if (mounted) setState(() => isSaving = false);
     }
   }
 
@@ -188,6 +278,15 @@ class _ReadingPageState extends State<ReadingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFFDF7F9),
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFFDB2777)),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFDF7F9),
       body: SafeArea(
@@ -196,32 +295,62 @@ class _ReadingPageState extends State<ReadingPage> {
             _buildHeader(),
             _buildProgressBar(),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildPassageCard(),
-                    const SizedBox(height: 20),
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Questions",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+              child: RefreshIndicator(
+                onRefresh: _fetchReadingTest,
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildModeSelector(),
+                      const SizedBox(height: 16),
+                      if (currentPracticeType != null) _buildPassageCard(),
+                      if (currentPracticeType != null)
+                        const SizedBox(height: 20),
+                      if (currentPracticeType == null)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 30),
+                          child: Text(
+                            'Select a practice mode to start.',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 15),
-                    ...List.generate(
-                      questions.length,
-                      (index) => _buildQuestionCard(index),
-                    ),
-                    const SizedBox(height: 20),
-                    _buildSubmitButton(),
-                    if (submitted) _buildAnalyticsCard(),
-                    const SizedBox(height: 80),
-                  ],
+                      if (currentPracticeType != null)
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Questions (${questions.length})',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      if (currentPracticeType != null)
+                        const SizedBox(height: 15),
+                      if (currentPracticeType != null && questions.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: Text(
+                            'No questions found for this practice mode.',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      else if (currentPracticeType != null)
+                        ...List.generate(
+                          questions.length,
+                          (index) => _buildQuestionCard(index),
+                        ),
+                      const SizedBox(height: 20),
+                      if (currentPracticeType != null && questions.isNotEmpty)
+                        _buildSubmitButton(),
+                      if (submitted) _buildAnalyticsCard(),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -239,49 +368,43 @@ class _ReadingPageState extends State<ReadingPage> {
         children: [
           const CircleAvatar(
             backgroundColor: Color(0xFFFCE7F3),
-            child: Icon(
-              Icons.menu_book_rounded,
-              color: Color(0xFFDB2777),
-            ),
+            child: Icon(Icons.menu_book_rounded, color: Color(0xFFDB2777)),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "IELTS Reading",
-                  style: TextStyle(
-                    fontSize: 22,
+                  currentTitle,
+                  style: const TextStyle(
+                    fontSize: 21,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
-                  "Academic Passage 1",
-                  style: TextStyle(color: Colors.grey),
+                  currentPracticeType == null
+                      ? 'Choose a practice mode'
+                      : passageTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.grey),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 8,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF1F2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.timer_outlined,
-                  color: Colors.red,
-                  size: 18,
-                ),
+                const Icon(Icons.timer_outlined, color: Colors.red, size: 18),
                 const SizedBox(width: 5),
                 Text(
-                  formatTime(duration),
+                  _formatTime(duration),
                   style: const TextStyle(
                     color: Colors.red,
                     fontWeight: FontWeight.bold,
@@ -302,7 +425,9 @@ class _ReadingPageState extends State<ReadingPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "Progress: $answeredCount/${questions.length}",
+            currentPracticeType == null
+                ? 'Progress: 0/0'
+                : 'Progress: $answeredCount/${questions.length}',
             style: const TextStyle(
               fontWeight: FontWeight.w600,
               color: Colors.grey,
@@ -312,12 +437,10 @@ class _ReadingPageState extends State<ReadingPage> {
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: LinearProgressIndicator(
-              value: progress,
+              value: currentPracticeType == null ? 0 : progress,
               minHeight: 8,
               backgroundColor: Colors.pink.shade100,
-              valueColor: const AlwaysStoppedAnimation(
-                Color(0xFFDB2777),
-              ),
+              valueColor: const AlwaysStoppedAnimation(Color(0xFFDB2777)),
             ),
           ),
         ],
@@ -325,7 +448,125 @@ class _ReadingPageState extends State<ReadingPage> {
     );
   }
 
+  Widget _buildModeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Choose Practice Mode',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 12),
+        _modeCard(
+          title: 'Full Mixed Test',
+          subtitle: 'MCQ + Fill Blank + True/False',
+          icon: Icons.menu_book_rounded,
+          active: currentPracticeType == 'mixed',
+          onTap: () => _changeMode(
+            title: 'Full Mixed Reading Test',
+            practiceType: 'mixed',
+            questionTypes: null,
+          ),
+        ),
+        _modeCard(
+          title: 'MCQ Practice',
+          subtitle: 'Only multiple choice questions',
+          icon: Icons.check_circle_outline,
+          active: currentPracticeType == 'mcq',
+          onTap: () => _changeMode(
+            title: 'MCQ Practice',
+            practiceType: 'mcq',
+            questionTypes: ['mcq'],
+          ),
+        ),
+        _modeCard(
+          title: 'Fill in the Blank',
+          subtitle: 'Only written blank answers',
+          icon: Icons.edit_note,
+          active: currentPracticeType == 'fill_blank',
+          onTap: () => _changeMode(
+            title: 'Fill in the Blank',
+            practiceType: 'fill_blank',
+            questionTypes: ['fill_blank'],
+          ),
+        ),
+        _modeCard(
+          title: 'True / False / Not Given',
+          subtitle: 'Only TFNG questions',
+          icon: Icons.rule,
+          active: currentPracticeType == 'true_false_not_given',
+          onTap: () => _changeMode(
+            title: 'True / False / Not Given',
+            practiceType: 'true_false_not_given',
+            questionTypes: ['true_false_not_given'],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _modeCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: active ? const Color(0xFFFCE7F3) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: active ? const Color(0xFFDB2777) : Colors.pink.shade100,
+              width: active ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor:
+                    active ? const Color(0xFFDB2777) : const Color(0xFFFCE7F3),
+                child: Icon(
+                  icon,
+                  color: active ? Colors.white : const Color(0xFFDB2777),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(subtitle,
+                        style:
+                            const TextStyle(color: Colors.grey, fontSize: 12)),
+                  ],
+                ),
+              ),
+              if (active)
+                const Icon(Icons.check_circle, color: Color(0xFFDB2777)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPassageCard() {
+    final preview = passageText.length > 150
+        ? '${passageText.substring(0, 150)}...'
+        : passageText;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
@@ -336,21 +577,28 @@ class _ReadingPageState extends State<ReadingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Reading Passage",
-            style: TextStyle(
+          Text(
+            passageTitle,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 10),
-          const Text(
-            "Modern education has changed significantly with the growth of technology.",
-            style: TextStyle(
-              color: Colors.white70,
-              height: 1.5,
+          if (difficulty.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              difficulty.toUpperCase(),
+              style: const TextStyle(
+                color: Color(0xFF38BDF8),
+                fontWeight: FontWeight.bold,
+              ),
             ),
+          ],
+          const SizedBox(height: 10),
+          Text(
+            preview,
+            style: const TextStyle(color: Colors.white70, height: 1.5),
           ),
           const SizedBox(height: 16),
           Row(
@@ -359,7 +607,7 @@ class _ReadingPageState extends State<ReadingPage> {
                 child: ElevatedButton.icon(
                   onPressed: _showFullPassage,
                   icon: const Icon(Icons.visibility),
-                  label: const Text("View Passage"),
+                  label: const Text('View Passage'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F2937),
                     foregroundColor: Colors.white,
@@ -371,7 +619,7 @@ class _ReadingPageState extends State<ReadingPage> {
                 child: ElevatedButton.icon(
                   onPressed: _showNoteDialog,
                   icon: const Icon(Icons.note_alt_outlined),
-                  label: const Text("Take Notes"),
+                  label: const Text('Take Notes'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1F2937),
                     foregroundColor: Colors.white,
@@ -385,60 +633,15 @@ class _ReadingPageState extends State<ReadingPage> {
     );
   }
 
-  void _showNoteDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text("Take Notes"),
-          content: TextField(
-            controller: noteController,
-            maxLines: 8,
-            decoration: InputDecoration(
-              hintText: "Write your notes here...",
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Notes saved successfully"),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDB2777),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text("Save"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _showFullPassage() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(25),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
-      builder: (sheetContext) {
+      builder: (_) {
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.85,
@@ -449,35 +652,63 @@ class _ReadingPageState extends State<ReadingPage> {
               padding: const EdgeInsets.all(20),
               child: ListView(
                 controller: scrollController,
-                children: const [
+                children: [
                   Text(
-                    "The Future of Education",
-                    style: TextStyle(
+                    passageTitle,
+                    style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   Text(
-                    "Modern education has changed significantly with the growth of technology. "
-                    "Students now use digital platforms, online resources, and artificial intelligence "
-                    "tools to improve their learning. These tools help students understand difficult "
-                    "topics, track their progress, and receive feedback more quickly.\n\n"
-                    "However, technology cannot replace the role of teachers completely. Teachers guide "
-                    "students, explain ideas clearly, and support emotional development. The best learning "
-                    "environment combines technology with human guidance.\n\n"
-                    "In the future, education is likely to become more personalized. Students may receive "
-                    "lessons based on their strengths and weaknesses. This can help learners improve faster "
-                    "and become more confident.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      height: 1.7,
-                    ),
+                    passageText,
+                    style: const TextStyle(fontSize: 16, height: 1.7),
                   ),
                 ],
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  void _showNoteDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Take Notes'),
+          content: TextField(
+            controller: noteController,
+            maxLines: 8,
+            decoration: InputDecoration(
+              hintText: 'Write your notes here...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Notes saved successfully')),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDB2777),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Save'),
+            ),
+          ],
         );
       },
     );
@@ -492,9 +723,7 @@ class _ReadingPageState extends State<ReadingPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.pink.shade100,
-        ),
+        border: Border.all(color: Colors.pink.shade100),
       ),
       child: Column(
         children: [
@@ -504,7 +733,7 @@ class _ReadingPageState extends State<ReadingPage> {
               CircleAvatar(
                 backgroundColor: const Color(0xFFFCE7F3),
                 child: Text(
-                  "${index + 1}",
+                  '${index + 1}',
                   style: const TextStyle(
                     color: Color(0xFFDB2777),
                     fontWeight: FontWeight.bold,
@@ -514,7 +743,7 @@ class _ReadingPageState extends State<ReadingPage> {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  question["question"],
+                  question['question_text']?.toString() ?? '',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -546,16 +775,13 @@ class _ReadingPageState extends State<ReadingPage> {
             alignment: Alignment.centerLeft,
             child: Container(
               margin: const EdgeInsets.only(left: 56),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 6,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: const Color(0xFFFDF2F8),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                question["type"],
+                question['question_type']?.toString() ?? '',
                 style: const TextStyle(
                   color: Color(0xFFDB2777),
                   fontWeight: FontWeight.w600,
@@ -564,28 +790,110 @@ class _ReadingPageState extends State<ReadingPage> {
             ),
           ),
           const SizedBox(height: 14),
-          ...List.generate(
-            question["options"].length,
-            (optionIndex) => _buildOption(index, optionIndex),
-          ),
+          _buildAnswerInput(index),
+          if (submitted) _buildCorrectAnswerBox(index),
         ],
       ),
     );
   }
 
-  Widget _buildOption(int questionIndex, int optionIndex) {
-    final isSelected = selectedAnswers[questionIndex] == optionIndex;
-    final correctAnswer = questions[questionIndex]["answer"];
-    final correctAnswerText =
-        questions[questionIndex]["options"][correctAnswer];
+  Widget _buildAnswerInput(int questionIndex) {
+    final question = questions[questionIndex];
+    final type = _normalize(question['question_type'].toString());
 
-    final isCorrect = submitted && optionIndex == correctAnswer;
-    final isWrong = submitted && isSelected && optionIndex != correctAnswer;
+    if (type.contains('mcq') ||
+        type == 'matching_heading' ||
+        type == 'matching_information') {
+      final options = List<Map<String, dynamic>>.from(
+        question['reading_options'] ?? [],
+      );
+
+      options.sort((a, b) {
+        final aOrder = a['option_order'] ?? 0;
+        final bOrder = b['option_order'] ?? 0;
+        return aOrder.compareTo(bOrder);
+      });
+
+      if (options.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.only(left: 56),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'No options added for this question',
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        );
+      }
+
+      return Column(
+        children: options
+            .map(
+              (option) => _buildTextOption(
+                questionIndex,
+                option['option_text'].toString(),
+              ),
+            )
+            .toList(),
+      );
+    }
+
+    if (type == 'true_false_not_given') {
+      return Column(
+        children: ['True', 'False', 'Not Given']
+            .map((option) => _buildTextOption(questionIndex, option))
+            .toList(),
+      );
+    }
+
+    if (type == 'yes_no_not_given') {
+      return Column(
+        children: ['Yes', 'No', 'Not Given']
+            .map((option) => _buildTextOption(questionIndex, option))
+            .toList(),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 56),
+      child: TextField(
+        enabled: !submitted,
+        onChanged: (value) {
+          selectedAnswers[questionIndex] = value;
+        },
+        decoration: InputDecoration(
+          hintText: 'Write your answer',
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: Color(0xFFDB2777), width: 2),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextOption(int questionIndex, String optionText) {
+    final selected = selectedAnswers[questionIndex] == optionText;
+    final correctAnswer =
+        questions[questionIndex]['correct_answer'].toString().trim();
+
+    final isCorrect =
+        submitted && _normalize(optionText) == _normalize(correctAnswer);
+
+    final isWrong = submitted &&
+        selected &&
+        _normalize(optionText) != _normalize(correctAnswer);
 
     Color borderColor = Colors.pink.shade100;
     Color bgColor = Colors.white;
 
-    if (isSelected) {
+    if (selected) {
       borderColor = const Color(0xFFDB2777);
       bgColor = const Color(0xFFFDF2F8);
     }
@@ -605,69 +913,84 @@ class _ReadingPageState extends State<ReadingPage> {
           ? null
           : () {
               setState(() {
-                selectedAnswers[questionIndex] = optionIndex;
+                selectedAnswers[questionIndex] = optionText;
               });
             },
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(
-          left: 56,
-          bottom: 12,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 18,
-        ),
+        margin: const EdgeInsets.only(left: 56, bottom: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
         decoration: BoxDecoration(
           color: bgColor,
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: borderColor),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    questions[questionIndex]["options"][optionIndex],
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                if (isSelected && !submitted)
-                  const Icon(
-                    Icons.check_circle,
-                    color: Color(0xFFDB2777),
-                  ),
-                if (isCorrect)
-                  const Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
-                if (isWrong)
-                  const Icon(
-                    Icons.cancel,
-                    color: Colors.red,
-                  ),
-              ],
-            ),
-            if (isWrong)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  "Correct answer: $correctAnswerText",
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+            Expanded(
+              child: Text(
+                optionText,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+            ),
+            if (selected && !submitted)
+              const Icon(Icons.check_circle, color: Color(0xFFDB2777)),
+            if (isCorrect) const Icon(Icons.check_circle, color: Colors.green),
+            if (isWrong) const Icon(Icons.cancel, color: Colors.red),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCorrectAnswerBox(int index) {
+    final userAnswer = selectedAnswers[index]?.trim() ?? '';
+    final correctAnswer = questions[index]['correct_answer'].toString().trim();
+    final explanation = (questions[index]['explanation'] ?? '').toString();
+
+    final isCorrect = _normalize(userAnswer) == _normalize(correctAnswer);
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(left: 56, top: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isCorrect ? const Color(0xFFDCFCE7) : const Color(0xFFFFF7ED),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isCorrect ? Colors.green : Colors.orange,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            isCorrect ? 'Correct' : 'Correct answer: $correctAnswer',
+            style: TextStyle(
+              color: isCorrect ? Colors.green : Colors.orange.shade900,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (userAnswer.isEmpty && !isCorrect)
+            const Padding(
+              padding: EdgeInsets.only(top: 4),
+              child: Text(
+                'You did not answer this question.',
+                style: TextStyle(color: Colors.grey),
+              ),
+            ),
+          if (explanation.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'Explanation: $explanation',
+                style: const TextStyle(color: Colors.grey, height: 1.4),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -677,14 +1000,10 @@ class _ReadingPageState extends State<ReadingPage> {
       width: double.infinity,
       height: 56,
       child: ElevatedButton(
-        onPressed: answeredCount == questions.length && !isSaving
+        onPressed: currentPracticeType != null && !isSaving && !submitted
             ? () async {
                 countdownTimer?.cancel();
-
-                setState(() {
-                  submitted = true;
-                });
-
+                setState(() => submitted = true);
                 await _saveReadingScoreToSupabase();
               }
             : null,
@@ -697,10 +1016,10 @@ class _ReadingPageState extends State<ReadingPage> {
         ),
         child: Text(
           isSaving
-              ? "Saving..."
+              ? 'Saving...'
               : submitted
-                  ? "Submitted"
-                  : "Submit Answers",
+                  ? 'Submitted'
+                  : 'Submit Answers',
           style: const TextStyle(
             color: Colors.white,
             fontSize: 17,
@@ -723,7 +1042,7 @@ class _ReadingPageState extends State<ReadingPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "AI Reading Analytics",
+            'Reading Analytics',
             style: TextStyle(
               color: Colors.white,
               fontSize: 21,
@@ -733,25 +1052,16 @@ class _ReadingPageState extends State<ReadingPage> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _analyticsBox(
-                "Score",
-                "$correctCount/${questions.length}",
-              ),
+              _analyticsBox('Score', '$correctCount/${questions.length}'),
               const SizedBox(width: 10),
-              _analyticsBox(
-                "Accuracy",
-                "$percentage%",
-              ),
+              _analyticsBox('Accuracy', '$percentage%'),
               const SizedBox(width: 10),
-              _analyticsBox(
-                "Band",
-                _bandPrediction(percentage),
-              ),
+              _analyticsBox('Band', bandScore.toStringAsFixed(1)),
             ],
           ),
           const SizedBox(height: 16),
           const Text(
-            "AI Insight",
+            'Insight',
             style: TextStyle(
               color: Color(0xFF38BDF8),
               fontSize: 16,
@@ -761,10 +1071,7 @@ class _ReadingPageState extends State<ReadingPage> {
           const SizedBox(height: 8),
           Text(
             _aiInsight(percentage),
-            style: const TextStyle(
-              color: Colors.white70,
-              height: 1.5,
-            ),
+            style: const TextStyle(color: Colors.white70, height: 1.5),
           ),
         ],
       ),
@@ -789,10 +1096,7 @@ class _ReadingPageState extends State<ReadingPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(
-              title,
-              style: const TextStyle(color: Colors.white70),
-            ),
+            Text(title, style: const TextStyle(color: Colors.white70)),
           ],
         ),
       ),
@@ -801,15 +1105,15 @@ class _ReadingPageState extends State<ReadingPage> {
 
   String _aiInsight(int percentage) {
     if (percentage >= 85) {
-      return "Excellent work! Your reading accuracy is strong. Now practice harder IELTS passages and focus on time management.";
+      return 'Excellent work! Practice harder IELTS passages and focus on time management.';
     } else if (percentage >= 70) {
-      return "Good performance. You understand the passage well, but review detail-based and inference questions to improve your band.";
+      return 'Good performance. Review detail-based and inference questions.';
     } else if (percentage >= 55) {
-      return "Average performance. Focus on identifying keywords, scanning for details, and understanding paragraph meaning.";
+      return 'Average performance. Focus on keywords, scanning, and paragraph meaning.';
     } else if (percentage >= 40) {
-      return "You need more practice. Try reading the passage slowly first, underline keywords, and avoid guessing too quickly.";
+      return 'You need more practice. Underline keywords and avoid guessing too quickly.';
     } else {
-      return "Basic understanding needs improvement. Start with short passages, learn common IELTS question types, and practice vocabulary daily.";
+      return 'Basic understanding needs improvement. Start with short passages and vocabulary practice.';
     }
   }
 
@@ -820,18 +1124,12 @@ class _ReadingPageState extends State<ReadingPage> {
       selectedItemColor: const Color(0xFFDB2777),
       unselectedItemColor: Colors.grey,
       items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: "Home",
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(
           icon: Icon(Icons.bar_chart),
-          label: "Analytics",
+          label: 'Analytics',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: "Profile",
-        ),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
   }
