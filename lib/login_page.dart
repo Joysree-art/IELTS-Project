@@ -54,7 +54,13 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (response.user != null) {
-        final profile = await _supabase
+         if (response.user!.emailConfirmedAt == null) {
+         await _supabase.auth.signOut();
+         _showSnackBar('Please verify your email before login');
+         return;
+       }
+
+      final profile = await _supabase
             .from('profiles')
             .select('role')
             .eq('id', response.user!.id)
