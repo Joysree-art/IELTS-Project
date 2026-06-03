@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_page.dart';
 import 'analytics_page.dart';
 import 'profile_page.dart';
+import 'services/gemini_service.dart';
 
 class SpeakingPage extends StatefulWidget {
   const SpeakingPage({super.key});
@@ -229,76 +230,63 @@ class _SpeakingPageState extends State<SpeakingPage> {
   }
 
   Future<void> _stopRecording() async {
-    _timer?.cancel();
-    await _speech.stop();
+  _timer?.cancel();
+  await _speech.stop();
 
+  setState(() {
+    _isRecording = false;
+    _isAnalyzing = true;
+  });
+
+  await _analyzeSpeakingWithAI();
+}
+
+  
+  Future<void> _analyzeSpeakingWithAI() async {
+  if (_transcript.trim().isEmpty) {
     setState(() {
-      _isRecording = false;
-      _isAnalyzing = true;
-    });
-
-    await Future.delayed(const Duration(seconds: 2));
-    _analyzeSpeaking();
-
-    setState(() {
-      _isAnalyzing = false;
-      _hasResult = true;
-    });
-  }
-
-  void _analyzeSpeaking() {
-    final words = _transcript.trim().isEmpty
-        ? <String>[]
-        : _transcript.trim().split(RegExp(r'\s+'));
-
-    final wordCount = words.length;
-    final uniqueWords = words.map((e) => e.toLowerCase()).toSet().length;
-    final vocabRatio = wordCount == 0 ? 0.0 : uniqueWords / wordCount;
-
-    if (wordCount == 0) {
       _bandScore = 0.0;
       _fluency = "No speech detected.";
       _vocabulary = "No vocabulary detected.";
       _grammar = "No sentence detected.";
       _pronunciation = "Pronunciation could not be analyzed.";
       _overallFeedback = "Please try again and speak clearly.";
-      return;
-    }
-
-    double score = 4.0;
-
-    if (wordCount >= 20) score += 0.7;
-    if (wordCount >= 40) score += 0.7;
-    if (wordCount >= 70) score += 0.7;
-    if (wordCount >= 100) score += 0.5;
-    if (vocabRatio > 0.45) score += 0.5;
-    if (_transcript.contains(".") || _transcript.contains(",")) score += 0.2;
-
-    if (score > 8.5) score = 8.5;
-
-    _bandScore = double.parse(score.toStringAsFixed(1));
-
-    _fluency = wordCount < 35
-        ? "Your answer is short. Try to speak more continuously with more details."
-        : "Your fluency is acceptable. You gave a clear response with enough length.";
-
-    _vocabulary = vocabRatio < 0.35
-        ? "Vocabulary range is limited. Try to use more topic-specific words."
-        : "Good vocabulary variety. Try adding advanced IELTS expressions.";
-
-    _grammar = wordCount < 50
-        ? "Use longer and more complete sentences."
-        : "Grammar looks generally understandable. Try to use complex sentence structures.";
-
-    _pronunciation =
-        "Basic pronunciation check is estimated from speech recognition clarity. For real pronunciation scoring, audio AI/API is needed.";
-
-    _overallFeedback = _bandScore < 5.5
-        ? "You need to speak longer and organize your answer better."
-        : _bandScore < 7
-            ? "Good attempt. Improve vocabulary and sentence complexity."
-            : "Strong response. Keep practicing advanced vocabulary and natural fluency.";
+      _isAnalyzing = false;
+      _hasResult = true;
+    });
+    return;
   }
+
+  try {
+    final result = await GeminiService.checkSpeaking(
+      part: _selectedPart,
+      topic: _topic,
+      cuePoints: _cuePoints,
+      transcript: _transcript,
+    );
+
+    setState(() {
+      _bandScore = double.tryParse(result['band_score'].toString()) ?? 0.0;
+      _fluency = result['fluency']?.toString() ?? '';
+      _vocabulary = result['vocabulary']?.toString() ?? '';
+      _grammar = result['grammar']?.toString() ?? '';
+      _pronunciation = result['pronunciation']?.toString() ?? '';
+      _overallFeedback = result['overall_feedback']?.toString() ?? '';
+      _isAnalyzing = false;
+      _hasResult = true;
+    });
+  } catch (e) {
+    setState(() {
+      _isAnalyzing = false;
+      _hasResult = false;
+    });
+
+    _showMessage("AI speaking feedback failed: $e");
+  }
+}
+  
+
+
 
   Future<void> _saveResult() async {
     if (_transcript.trim().isEmpty) {
