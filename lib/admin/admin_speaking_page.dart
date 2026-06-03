@@ -206,9 +206,9 @@ class _AdminSpeakingPageState extends State<AdminSpeakingPage> {
                 children: [
                   _chip(selectedPart),
                   if (category.isNotEmpty) ...[
-                    const SizedBox(width: 8),
-                    _chip(category),
-                  ],
+                     const SizedBox(width: 8),
+                     _chip(category),
+                    ],
                   const SizedBox(width: 8),
                   _chip(difficulty),
                   const Spacer(),
