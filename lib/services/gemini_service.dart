@@ -215,8 +215,60 @@ Do not add explanation outside JSON.
 Use exactly this JSON structure:
 
 {
-  "questions": []
+  "questions": [
+    {
+      "question_text": "Question here",
+      "question_type": "MCQ",
+      "correct_answer": "Correct option text here",
+      "explanation": "Short explanation here",
+      "options": ["Option 1", "Option 2", "Option 3", "Option 4"]
+    },
+    {
+      "question_text": "Question with ______ blank",
+      "question_type": "fill_blank",
+      "correct_answer": "answer",
+      "explanation": "Short explanation here"
+    },
+    {
+      "question_text": "Statement here",
+      "question_type": "true_false_not_given",
+      "correct_answer": "True",
+      "explanation": "Short explanation here"
+    },
+    {
+      "question_text": "Choose the correct heading for Paragraph A",
+      "question_type": "matching_heading",
+      "correct_answer": "Correct heading text",
+      "explanation": "Short explanation here",
+      "options": ["Heading 1", "Heading 2", "Heading 3", "Heading 4"]
+    },
+    {
+      "question_text": "Which paragraph mentions government support?",
+      "question_type": "matching_information",
+      "correct_answer": "Paragraph C",
+      "explanation": "Short explanation here",
+      "options": ["Paragraph A", "Paragraph B", "Paragraph C", "Paragraph D"]
+    },
+    {
+      "question_text": "Short answer question here",
+      "question_type": "short_answer",
+      "correct_answer": "answer",
+      "explanation": "Short explanation here"
+    }
+  ]
 }
+
+Rules:
+- Generate 13 to 14 IELTS Reading questions.
+- Include a natural mix of:
+  MCQ, fill_blank, true_false_not_given, matching_heading, matching_information, short_answer.
+- For MCQ, matching_heading, and matching_information, include options array.
+- For MCQ, correct_answer must exactly match one option text.
+- For matching_heading, correct_answer must exactly match one heading option.
+- For matching_information, correct_answer must exactly match one paragraph option.
+- For true_false_not_given, correct_answer must be only: True, False, or Not Given.
+- For fill_blank and short_answer, use one short answer only.
+- Questions must be based only on the passage.
 
 Passage:
 $passageText

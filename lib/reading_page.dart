@@ -7,7 +7,12 @@ import 'analytics_page.dart';
 import 'profile_page.dart';
 
 class ReadingPage extends StatefulWidget {
-  const ReadingPage({super.key});
+  final String? selectedPassageId;
+
+  const ReadingPage({
+    super.key,
+    this.selectedPassageId,
+  });
 
   @override
   State<ReadingPage> createState() => _ReadingPageState();
@@ -57,13 +62,19 @@ class _ReadingPageState extends State<ReadingPage> {
     });
 
     try {
-      final passage = await supabase
-          .from('reading_passages')
-          .select()
-          .eq('is_published', true)
-          .order('created_at', ascending: false)
-          .limit(1)
-          .single();
+      final passage = widget.selectedPassageId != null
+          ? await supabase
+              .from('reading_passages')
+              .select()
+              .eq('id', widget.selectedPassageId!)
+              .single()
+          : await supabase
+              .from('reading_passages')
+              .select()
+              .eq('is_published', true)
+              .order('created_at', ascending: false)
+              .limit(1)
+              .single();
 
       final questionData = await supabase
           .from('reading_questions')
@@ -366,9 +377,15 @@ class _ReadingPageState extends State<ReadingPage> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
-          const CircleAvatar(
-            backgroundColor: Color(0xFFFCE7F3),
-            child: Icon(Icons.menu_book_rounded, color: Color(0xFFDB2777)),
+          InkWell(
+            onTap: () {
+              Navigator.pop(context);
+            },
+            borderRadius: BorderRadius.circular(30),
+            child: const CircleAvatar(
+              backgroundColor: Color(0xFFFCE7F3),
+              child: Icon(Icons.arrow_back, color: Color(0xFFDB2777)),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

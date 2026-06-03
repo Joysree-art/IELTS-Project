@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'reading_practice_list_page.dart';
 
 import 'writing_page.dart';
 import 'speaking_page.dart';
@@ -80,7 +81,6 @@ class _HomePageState extends State<HomePage> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-
                       GestureDetector(
                         onTap: openProfilePage,
                         child: CircleAvatar(
@@ -144,7 +144,7 @@ class _HomePageState extends State<HomePage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const ReadingPage(),
+                              builder: (_) => const ReadingPracticeListPage(),
                             ),
                           );
                         },
@@ -215,7 +215,7 @@ class _HomePageState extends State<HomePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const ReadingPage(),
+                          builder: (_) => const ReadingPracticeListPage(),
                         ),
                       );
                     },
@@ -239,7 +239,6 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,
         selectedItemColor: Colors.red,
