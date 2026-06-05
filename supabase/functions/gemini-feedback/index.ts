@@ -11,9 +11,7 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response("ok", {
-      headers: corsHeaders,
-    });
+    return new Response("ok", { headers: corsHeaders });
   }
 
   try {
@@ -38,7 +36,9 @@ Deno.serve(async (req) => {
     }
 
     const prompt = `
-You are an IELTS examiner.
+You are a strict IELTS Writing examiner.
+
+Evaluate the student's IELTS Writing answer using official IELTS band descriptors.
 
 Module: ${module}
 
@@ -48,14 +48,26 @@ ${question}
 Student Answer:
 ${answer}
 
-Evaluate the answer and return ONLY valid JSON in this format:
+Rules:
+- Give a realistic IELTS band score from 0 to 9.
+- Use 0.5 increments only, for example 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0.
+- Do not give the same band score every time.
+- Do not be overly generous.
+- A poor, incomplete, memorized, irrelevant, or very short answer should receive a low band.
+- A Band 9 answer must be excellent in task response, coherence, vocabulary, and grammar.
+- Return ONLY valid JSON.
+- Do not use markdown.
+- Do not wrap JSON in triple backticks.
+
+Return this JSON structure:
 
 {
-  "band_score": "6.5",
+  "band_score": "",
+  "task_response": "",
+  "coherence": "",
+  "lexical_resource": "",
+  "grammar": "",
   "overall_feedback": "",
-  "grammar_feedback": "",
-  "vocabulary_feedback": "",
-  "coherence_feedback": "",
   "improvement_tips": []
 }
 `;
@@ -77,15 +89,59 @@ Evaluate the answer and return ONLY valid JSON in this format:
               ],
             },
           ],
+          generationConfig: {
+            temperature: 0.4,
+            responseMimeType: "application/json",
+          },
         }),
       },
     );
 
     const data = await geminiResponse.json();
 
-    const feedback =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      JSON.stringify(data);
+    if (!geminiResponse.ok) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: data,
+        }),
+        {
+          status: geminiResponse.status,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+
+    const feedbackText =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!feedbackText) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "No feedback returned from Gemini",
+          raw: data,
+        }),
+        {
+          status: 500,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+
+    let feedback;
+
+    try {
+      feedback = JSON.parse(feedbackText);
+    } catch (_) {
+      feedback = feedbackText;
+    }
 
     return new Response(
       JSON.stringify({

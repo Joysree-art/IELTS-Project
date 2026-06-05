@@ -5,7 +5,7 @@ import 'reading_practice_list_page.dart';
 import 'writing_page.dart';
 import 'speaking_page.dart';
 import 'reading_page.dart';
-import 'listening_page.dart';
+import 'listening/listening_page.dart';
 import 'profile_page.dart';
 import 'analytics_page.dart';
 
