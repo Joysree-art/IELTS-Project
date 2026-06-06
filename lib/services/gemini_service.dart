@@ -86,10 +86,10 @@ Use exactly this JSON structure:
             decoded['overall_feedback']?.toString() ?? 'No overall feedback.',
         'grammar_feedback':
             decoded['grammar_feedback']?.toString() ?? 'No grammar feedback.',
-        'vocabulary_feedback':
-            decoded['vocabulary_feedback']?.toString() ?? 'No vocabulary feedback.',
-        'coherence_feedback':
-            decoded['coherence_feedback']?.toString() ?? 'No coherence feedback.',
+        'vocabulary_feedback': decoded['vocabulary_feedback']?.toString() ??
+            'No vocabulary feedback.',
+        'coherence_feedback': decoded['coherence_feedback']?.toString() ??
+            'No coherence feedback.',
         'improvement_tips': decoded['improvement_tips'] is List
             ? decoded['improvement_tips']
             : <String>[],
@@ -180,10 +180,11 @@ Use exactly this JSON structure:
       return {
         'band_score': decoded['band_score']?.toString() ?? '0.0',
         'fluency': decoded['fluency']?.toString() ?? 'No fluency feedback.',
-        'vocabulary': decoded['vocabulary']?.toString() ?? 'No vocabulary feedback.',
+        'vocabulary':
+            decoded['vocabulary']?.toString() ?? 'No vocabulary feedback.',
         'grammar': decoded['grammar']?.toString() ?? 'No grammar feedback.',
-        'pronunciation':
-            decoded['pronunciation']?.toString() ?? 'No pronunciation feedback.',
+        'pronunciation': decoded['pronunciation']?.toString() ??
+            'No pronunciation feedback.',
         'overall_feedback':
             decoded['overall_feedback']?.toString() ?? 'No overall feedback.',
         'improvement_tips': decoded['improvement_tips'] is List
@@ -199,7 +200,7 @@ Use exactly this JSON structure:
     required String passageText,
   }) async {
     final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${AppSecrets.geminiApiKey}',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${AppSecrets.geminiApiKey}',
     );
 
     final prompt = '''

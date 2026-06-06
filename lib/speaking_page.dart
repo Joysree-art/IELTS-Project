@@ -230,63 +230,59 @@ class _SpeakingPageState extends State<SpeakingPage> {
   }
 
   Future<void> _stopRecording() async {
-  _timer?.cancel();
-  await _speech.stop();
+    _timer?.cancel();
+    await _speech.stop();
 
-  setState(() {
-    _isRecording = false;
-    _isAnalyzing = true;
-  });
+    setState(() {
+      _isRecording = false;
+      _isAnalyzing = true;
+    });
 
-  await _analyzeSpeakingWithAI();
-}
+    await _analyzeSpeakingWithAI();
+  }
 
-  
   Future<void> _analyzeSpeakingWithAI() async {
-  if (_transcript.trim().isEmpty) {
-    setState(() {
-      _bandScore = 0.0;
-      _fluency = "No speech detected.";
-      _vocabulary = "No vocabulary detected.";
-      _grammar = "No sentence detected.";
-      _pronunciation = "Pronunciation could not be analyzed.";
-      _overallFeedback = "Please try again and speak clearly.";
-      _isAnalyzing = false;
-      _hasResult = true;
-    });
-    return;
+    if (_transcript.trim().isEmpty) {
+      setState(() {
+        _bandScore = 0.0;
+        _fluency = "No speech detected.";
+        _vocabulary = "No vocabulary detected.";
+        _grammar = "No sentence detected.";
+        _pronunciation = "Pronunciation could not be analyzed.";
+        _overallFeedback = "Please try again and speak clearly.";
+        _isAnalyzing = false;
+        _hasResult = true;
+      });
+      return;
+    }
+
+    try {
+      final result = await GeminiService.checkSpeaking(
+        part: _selectedPart,
+        topic: _topic,
+        cuePoints: _cuePoints,
+        transcript: _transcript,
+      );
+
+      setState(() {
+        _bandScore = double.tryParse(result['band_score'].toString()) ?? 0.0;
+        _fluency = result['fluency']?.toString() ?? '';
+        _vocabulary = result['vocabulary']?.toString() ?? '';
+        _grammar = result['grammar']?.toString() ?? '';
+        _pronunciation = result['pronunciation']?.toString() ?? '';
+        _overallFeedback = result['overall_feedback']?.toString() ?? '';
+        _isAnalyzing = false;
+        _hasResult = true;
+      });
+    } catch (e) {
+      setState(() {
+        _isAnalyzing = false;
+        _hasResult = false;
+      });
+
+      _showMessage("AI speaking feedback failed: $e");
+    }
   }
-
-  try {
-    final result = await GeminiService.checkSpeaking(
-      part: _selectedPart,
-      topic: _topic,
-      cuePoints: _cuePoints,
-      transcript: _transcript,
-    );
-
-    setState(() {
-      _bandScore = double.tryParse(result['band_score'].toString()) ?? 0.0;
-      _fluency = result['fluency']?.toString() ?? '';
-      _vocabulary = result['vocabulary']?.toString() ?? '';
-      _grammar = result['grammar']?.toString() ?? '';
-      _pronunciation = result['pronunciation']?.toString() ?? '';
-      _overallFeedback = result['overall_feedback']?.toString() ?? '';
-      _isAnalyzing = false;
-      _hasResult = true;
-    });
-  } catch (e) {
-    setState(() {
-      _isAnalyzing = false;
-      _hasResult = false;
-    });
-
-    _showMessage("AI speaking feedback failed: $e");
-  }
-}
-  
-
-
 
   Future<void> _saveResult() async {
     if (_transcript.trim().isEmpty) {
@@ -312,6 +308,11 @@ class _SpeakingPageState extends State<SpeakingPage> {
         'grammar': _grammar,
         'pronunciation': _pronunciation,
         'feedback': _overallFeedback,
+      });
+      await supabase.from('ielts_scores').insert({
+        'user_id': user?.id,
+        'module': 'speaking',
+        'band_score': _bandScore,
       });
 
       _showMessage("Speaking result saved");
@@ -486,9 +487,8 @@ class _SpeakingPageState extends State<SpeakingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final timerText = _isPreparing
-        ? _formatTime(_prepSeconds)
-        : _formatTime(_speakSeconds);
+    final timerText =
+        _isPreparing ? _formatTime(_prepSeconds) : _formatTime(_speakSeconds);
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8FA),
@@ -572,14 +572,15 @@ class _SpeakingPageState extends State<SpeakingPage> {
                           ),
                     const SizedBox(height: 16),
                     TextButton.icon(
-                      onPressed: _isRecording || _isPreparing || _isLoadingTopics
-                          ? null
-                          : () {
-                              setState(() {
-                                _resetAll();
-                                _generateTopic();
-                              });
-                            },
+                      onPressed:
+                          _isRecording || _isPreparing || _isLoadingTopics
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _resetAll();
+                                    _generateTopic();
+                                  });
+                                },
                       icon: const Icon(Icons.refresh),
                       label: const Text("Change Topic"),
                       style: TextButton.styleFrom(
@@ -635,7 +636,8 @@ class _SpeakingPageState extends State<SpeakingPage> {
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
-                          onPressed: _isLoadingTopics ? null : _startPreparation,
+                          onPressed:
+                              _isLoadingTopics ? null : _startPreparation,
                           icon: const Icon(
                             Icons.play_arrow,
                             color: Color(0xFFE60046),

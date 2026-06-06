@@ -246,6 +246,12 @@ class _ReadingPageState extends State<ReadingPage> {
         'band_score': bandScore,
         'created_at': DateTime.now().toIso8601String(),
       });
+      await supabase.from('ielts_scores').insert({
+        'user_id': userId,
+        'module': 'reading',
+        'band_score': bandScore,
+        'created_at': DateTime.now().toIso8601String(),
+      });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

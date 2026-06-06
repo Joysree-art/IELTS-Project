@@ -656,6 +656,12 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
         })
         .select()
         .single();
+    await supabase.from('ielts_scores').insert({
+      'user_id': user.id,
+      'module': 'listening',
+      'band_score': band,
+      'created_at': DateTime.now().toIso8601String(),
+    });
 
     for (final qList in questionsBySection.values) {
       for (final q in qList) {
@@ -709,9 +715,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                   final newPosition =
                       audioPosition - const Duration(seconds: 10);
                   seekPracticeAudio(
-                    newPosition < Duration.zero
-                        ? Duration.zero
-                        : newPosition,
+                    newPosition < Duration.zero ? Duration.zero : newPosition,
                   );
                 },
               ),
@@ -737,7 +741,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
           ),
           Slider(
             value: audioPosition.inSeconds
-                .clamp(0, audioDuration.inSeconds > 0 ? audioDuration.inSeconds : 1)
+                .clamp(0,
+                    audioDuration.inSeconds > 0 ? audioDuration.inSeconds : 1)
                 .toDouble(),
             min: 0,
             max: audioDuration.inSeconds > 0
@@ -879,8 +884,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                               userAnswer: userAnswers[q['id']],
                               submitted: submitted,
                               isCorrect: submitted ? checkAnswer(q) : null,
-                              onChanged: (answer) =>
-                                  setAnswer(q['id'], answer),
+                              onChanged: (answer) => setAnswer(q['id'], answer),
                             );
                           }),
                         ],

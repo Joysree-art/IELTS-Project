@@ -108,6 +108,12 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
         'band_score': band,
         'feedback': parsedFeedback,
       });
+      await supabase.from('ielts_scores').insert({
+        'user_id': user?.id,
+        'module': 'writing',
+        'band_score': band,
+        'created_at': DateTime.now().toIso8601String(),
+      });
 
       if (!mounted) return;
 
@@ -189,7 +195,6 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
               ),
               const SizedBox(height: 18),
             ],
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(18),
@@ -203,9 +208,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                 style: const TextStyle(fontSize: 16, height: 1.6),
               ),
             ),
-
             const SizedBox(height: 18),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -222,9 +225,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                 ),
               ],
             ),
-
             const SizedBox(height: 14),
-
             TextField(
               controller: answerController,
               enabled: !submitted,
@@ -239,9 +240,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 20),
-
             SizedBox(
               width: double.infinity,
               height: 55,
@@ -266,7 +265,6 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                       ),
               ),
             ),
-
             if (submitted) ...[
               const SizedBox(height: 20),
               Container(
@@ -333,7 +331,8 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                               ),
                               _FeedbackText(
                                 title: 'Vocabulary',
-                                text: feedbackData!['vocabulary_feedback'] ?? '',
+                                text:
+                                    feedbackData!['vocabulary_feedback'] ?? '',
                               ),
                               _FeedbackText(
                                 title: 'Coherence',
@@ -367,7 +366,6 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                           ),
               ),
             ],
-
             const SizedBox(height: 30),
           ],
         ),

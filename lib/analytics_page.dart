@@ -15,65 +15,119 @@ class AnalyticsPage extends StatefulWidget {
 class _AnalyticsPageState extends State<AnalyticsPage> {
   bool isLoading = true;
 
-  double readingScore = 7.5;
-  double previousReadingScore = 6.0;
-  double improvement = 1.5;
+  double readingScore = 0.0;
+  double writingScore = 0.0;
+  double speakingScore = 0.0;
+  double listeningScore = 0.0;
 
-  final double writingScore = 6.5;
-  final double speakingScore = 7.0;
-  final double listeningScore = 6.0;
+  double overallBand = 0.0;
+  double improvement = 0.0;
 
-  List<double> readingTrend = [6.0, 6.0, 6.5, 6.5];
+  List<double> readingTrend = [0.0];
+  List<double> writingTrend = [0.0];
+  List<double> speakingTrend = [0.0];
+  List<double> listeningTrend = [0.0];
 
   @override
   void initState() {
     super.initState();
-    _fetchReadingScore();
+    _fetchAllScores();
   }
 
-  Future<void> _fetchReadingScore() async {
+  Future<void> _fetchAllScores() async {
     try {
-      final data = await Supabase.instance.client
-          .from('reading_scores')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(4);
+      final user = Supabase.instance.client.auth.currentUser;
 
-      if (data.isNotEmpty) {
-        final latest = (data[0]['band_score'] as num).toDouble();
-
-        double previous = previousReadingScore;
-        if (data.length > 1) {
-          previous = (data[1]['band_score'] as num).toDouble();
-        }
-
-        final trend = data
-            .map<double>((item) => (item['band_score'] as num).toDouble())
-            .toList()
-            .reversed
-            .toList();
-
-        setState(() {
-          readingScore = latest;
-          previousReadingScore = previous;
-          improvement = readingScore - previousReadingScore;
-          readingTrend = trend;
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
+      if (user == null) {
+        setState(() => isLoading = false);
+        return;
       }
-    } catch (e) {
+
+      final data = await Supabase.instance.client
+          .from('ielts_scores')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      double latestReading = 0.0;
+      double latestWriting = 0.0;
+      double latestSpeaking = 0.0;
+      double latestListening = 0.0;
+
+      final readingScores = <double>[];
+      final writingScores = <double>[];
+      final speakingScores = <double>[];
+      final listeningScores = <double>[];
+
+      for (final item in data) {
+        final module = item['module'].toString().toLowerCase();
+        final score = (item['band_score'] as num).toDouble();
+
+        if (module == 'reading') {
+          if (latestReading == 0.0) latestReading = score;
+          readingScores.add(score);
+        } else if (module == 'writing') {
+          if (latestWriting == 0.0) latestWriting = score;
+          writingScores.add(score);
+        } else if (module == 'speaking') {
+          if (latestSpeaking == 0.0) latestSpeaking = score;
+          speakingScores.add(score);
+        } else if (module == 'listening') {
+          if (latestListening == 0.0) latestListening = score;
+          listeningScores.add(score);
+        }
+      }
+
+      final latestScores = [
+        latestWriting,
+        latestSpeaking,
+        latestReading,
+        latestListening,
+      ].where((score) => score > 0).toList();
+
+      final calculatedOverall = latestScores.isEmpty
+          ? 0.0
+          : latestScores.reduce((a, b) => a + b) / latestScores.length;
+
+      double calculatedImprovement = 0.0;
+      if (readingScores.length > 1) {
+        calculatedImprovement = readingScores.first - readingScores[1];
+      }
+
       setState(() {
+        readingScore = latestReading;
+        writingScore = latestWriting;
+        speakingScore = latestSpeaking;
+        listeningScore = latestListening;
+        overallBand = calculatedOverall;
+        improvement = calculatedImprovement;
+
+        readingTrend = _lastFourAscending(readingScores);
+        writingTrend = _lastFourAscending(writingScores);
+        speakingTrend = _lastFourAscending(speakingScores);
+        listeningTrend = _lastFourAscending(listeningScores);
+
         isLoading = false;
       });
+    } catch (e) {
+      setState(() => isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load reading score: $e")),
+        SnackBar(content: Text("Failed to load analytics: $e")),
       );
     }
+  }
+
+  List<double> _lastFourAscending(List<double> scores) {
+    if (scores.isEmpty) return [0.0];
+
+    final latestFour = scores.take(4).toList().reversed.toList();
+
+    if (latestFour.length == 1) {
+      return [latestFour.first, latestFour.first];
+    }
+
+    return latestFour;
   }
 
   String _improvementText() {
@@ -90,7 +144,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         MaterialPageRoute(builder: (_) => HomePage()),
       );
     } else if (index == 1) {
-      _fetchReadingScore();
+      _fetchAllScores();
     } else if (index == 2) {
       Navigator.pushReplacement(
         context,
@@ -116,7 +170,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             _topBar(context),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: _fetchReadingScore,
+                onRefresh: _fetchAllScores,
                 child: isLoading
                     ? const Center(
                         child: CircularProgressIndicator(color: Colors.red),
@@ -130,9 +184,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               children: [
                                 Expanded(
                                   child: _GradientCard(
-                                    title: "Band Estimate",
-                                    value: readingScore.toStringAsFixed(1),
-                                    subtitle: "↗ Target: 7",
+                                    title: "Overall Band",
+                                    value: overallBand.toStringAsFixed(1),
+                                    subtitle: "Average of all modules",
                                     colors: const [
                                       Color(0xFFFF2A2A),
                                       Color(0xFFE9001E),
@@ -142,9 +196,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: _GradientCard(
-                                    title: "Improvement",
+                                    title: "Reading Change",
                                     value: _improvementText(),
-                                    subtitle: "Last 4 weeks",
+                                    subtitle: "Latest vs previous",
                                     colors: const [
                                       Color(0xFFFF2A2A),
                                       Color(0xFFF00058),
@@ -156,10 +210,15 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             const SizedBox(height: 24),
                             _ChartCard(
                               title: "Performance Trends",
-                              height: 320,
+                              height: 340,
                               child: CustomPaint(
-                                size: const Size(double.infinity, 230),
-                                painter: LineChartPainter(values: readingTrend),
+                                size: const Size(double.infinity, 250),
+                                painter: LineChartPainter(
+                                  readingValues: readingTrend,
+                                  writingValues: writingTrend,
+                                  speakingValues: speakingTrend,
+                                  listeningValues: listeningTrend,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 24),
@@ -173,23 +232,22 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             ),
                             const SizedBox(height: 24),
                             _ChartCard(
-                              title: "Weakness Detection",
+                              title: "Module Score Analysis",
                               height: 470,
-                              child: SingleChildScrollView(
-                                physics: const NeverScrollableScrollPhysics(),
-                                child: Column(
-                                  children: [
-                                    SizedBox(
-                                      height: 230,
-                                      width: 230,
-                                      child: CustomPaint(
-                                        painter: DonutChartPainter(),
+                              child: Column(
+                                children: [
+                                  SizedBox(
+                                    height: 230,
+                                    width: 230,
+                                    child: CustomPaint(
+                                      painter: DonutChartPainter(
+                                        scores: moduleScores,
                                       ),
                                     ),
-                                    const SizedBox(height: 24),
-                                    const _LegendGrid(),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  const _LegendGrid(),
+                                ],
                               ),
                             ),
                           ],
@@ -242,7 +300,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             ),
           ),
           IconButton(
-            onPressed: _fetchReadingScore,
+            onPressed: _fetchAllScores,
             icon: const Icon(Icons.refresh, color: Colors.red),
           ),
         ],
@@ -259,9 +317,13 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: "Home"),
         BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart), label: "Analytics"),
+          icon: Icon(Icons.bar_chart),
+          label: "Analytics",
+        ),
         BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline), label: "Profile"),
+          icon: Icon(Icons.person_outline),
+          label: "Profile",
+        ),
       ],
     );
   }
@@ -301,9 +363,11 @@ class _GradientCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 16)),
+            Text(
+              title,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
             const SizedBox(height: 10),
             FittedBox(
               fit: BoxFit.scaleDown,
@@ -317,9 +381,11 @@ class _GradientCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Text(subtitle,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: Colors.white, fontSize: 15)),
+            Text(
+              subtitle,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+            ),
           ],
         ),
       ),
@@ -352,13 +418,15 @@ class _ChartCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF071323),
-              )),
+          Text(
+            title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF071323),
+            ),
+          ),
           const SizedBox(height: 18),
           Expanded(child: Center(child: child)),
         ],
@@ -368,9 +436,17 @@ class _ChartCard extends StatelessWidget {
 }
 
 class LineChartPainter extends CustomPainter {
-  final List<double> values;
+  final List<double> readingValues;
+  final List<double> writingValues;
+  final List<double> speakingValues;
+  final List<double> listeningValues;
 
-  LineChartPainter({required this.values});
+  LineChartPainter({
+    required this.readingValues,
+    required this.writingValues,
+    required this.speakingValues,
+    required this.listeningValues,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -378,16 +454,11 @@ class LineChartPainter extends CustomPainter {
       ..color = const Color(0xFFE5E7EB)
       ..strokeWidth = 1;
 
-    final linePaint = Paint()
-      ..color = const Color(0xFFFF6B1A)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
     final left = 42.0;
     final top = 10.0;
-    final bottom = size.height - 55;
+    final bottom = size.height - 60;
     final right = size.width - 15;
 
     for (int i = 0; i < 4; i++) {
@@ -400,70 +471,87 @@ class LineChartPainter extends CustomPainter {
       canvas.drawLine(Offset(x, top), Offset(x, bottom), gridPaint);
     }
 
-    final displayValues =
-        values.length == 1 ? [values.first, values.first] : values;
+    void drawLine(List<double> values, Color color) {
+      if (values.isEmpty) return;
 
-    final points = <Offset>[];
+      final displayValues =
+          values.length == 1 ? [values.first, values.first] : values;
+      final points = <Offset>[];
 
-    for (int i = 0; i < displayValues.length; i++) {
-      final x = left + i * ((right - left) / max(1, displayValues.length - 1));
-      final y = bottom - ((displayValues[i] - 5) / 3) * (bottom - top);
-      points.add(Offset(x, y));
+      for (int i = 0; i < displayValues.length; i++) {
+        final x =
+            left + i * ((right - left) / max(1, displayValues.length - 1));
+        final safeValue = displayValues[i].clamp(0.0, 9.0);
+        final y = bottom - ((safeValue - 0) / 9) * (bottom - top);
+        points.add(Offset(x, y));
+      }
+
+      if (points.isEmpty) return;
+
+      final linePaint = Paint()
+        ..color = color
+        ..strokeWidth = 3
+        ..style = PaintingStyle.stroke;
+
+      final path = Path()..moveTo(points[0].dx, points[0].dy);
+
+      for (int i = 1; i < points.length; i++) {
+        path.lineTo(points[i].dx, points[i].dy);
+      }
+
+      canvas.drawPath(path, linePaint);
+
+      for (final p in points) {
+        canvas.drawCircle(p, 5, Paint()..color = Colors.white);
+        canvas.drawCircle(
+          p,
+          5,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3,
+        );
+      }
     }
 
-    final path = Path()..moveTo(points[0].dx, points[0].dy);
+    drawLine(writingValues, const Color(0xFFE82429));
+    drawLine(speakingValues, const Color(0xFFF23863));
+    drawLine(readingValues, const Color(0xFFE6459B));
+    drawLine(listeningValues, const Color(0xFFFF6B16));
 
-    for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
-    }
+    final weekLabels = ["Test 1", "Test 2", "Test 3", "Test 4"];
 
-    canvas.drawPath(path, linePaint);
+    for (int i = 0; i < 4; i++) {
+      final x = left + i * ((right - left) / 3);
 
-    final dotPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
-
-    final borderPaint = Paint()
-      ..color = const Color(0xFFFF6B1A)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-
-    for (final p in points) {
-      canvas.drawCircle(p, 5, dotPaint);
-      canvas.drawCircle(p, 5, borderPaint);
-    }
-
-    final weekLabels = ["Week 1", "Week 2", "Week 3", "Week 4"];
-
-    for (int i = 0; i < displayValues.length; i++) {
       textPainter.text = TextSpan(
         text: weekLabels[i],
-        style: const TextStyle(color: Colors.grey, fontSize: 12),
+        style: const TextStyle(color: Colors.grey, fontSize: 11),
       );
       textPainter.layout();
       textPainter.paint(
         canvas,
-        Offset(points[i].dx - textPainter.width / 2, bottom + 10),
+        Offset(x - textPainter.width / 2, bottom + 10),
       );
     }
 
-    final yLabels = ["8", "7.25", "6.5", "5.75", "5"];
+    final yLabels = ["9", "6", "3", "0"];
 
     for (int i = 0; i < yLabels.length; i++) {
-      final y = top + i * ((bottom - top) / 4);
+      final y = top + i * ((bottom - top) / 3);
       textPainter.text = TextSpan(
         text: yLabels[i],
         style: const TextStyle(color: Colors.grey, fontSize: 12),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(5, y - 8));
+      textPainter.paint(canvas, Offset(15, y - 8));
     }
 
     final legends = [
-      ["writing", const Color(0xFFE82429)],
-      ["speaking", const Color(0xFFF23863)],
-      ["reading", const Color(0xFFE6459B)],
-      ["listening", const Color(0xFFFF6B16)],
+      ["Writing", const Color(0xFFE82429)],
+      ["Speaking", const Color(0xFFF23863)],
+      ["Reading", const Color(0xFFE6459B)],
+      ["Listening", const Color(0xFFFF6B16)],
     ];
 
     double legendX = left;
@@ -473,14 +561,20 @@ class LineChartPainter extends CustomPainter {
       final label = item[0] as String;
       final color = item[1] as Color;
 
-      final p = Paint()
-        ..color = color
-        ..strokeWidth = 2;
-
       canvas.drawLine(
-          Offset(legendX, legendY), Offset(legendX + 12, legendY), p);
+        Offset(legendX, legendY),
+        Offset(legendX + 12, legendY),
+        Paint()
+          ..color = color
+          ..strokeWidth = 2,
+      );
+
       canvas.drawCircle(
-          Offset(legendX + 6, legendY), 3, Paint()..color = Colors.white);
+        Offset(legendX + 6, legendY),
+        3,
+        Paint()..color = Colors.white,
+      );
+
       canvas.drawCircle(
         Offset(legendX + 6, legendY),
         3,
@@ -492,18 +586,22 @@ class LineChartPainter extends CustomPainter {
 
       textPainter.text = TextSpan(
         text: label,
-        style: TextStyle(color: color, fontSize: 13),
+        style: TextStyle(color: color, fontSize: 12),
       );
       textPainter.layout();
+
       textPainter.paint(canvas, Offset(legendX + 16, legendY - 8));
 
-      legendX += textPainter.width + 38;
+      legendX += textPainter.width + 34;
     }
   }
 
   @override
   bool shouldRepaint(covariant LineChartPainter oldDelegate) {
-    return oldDelegate.values != values;
+    return oldDelegate.readingValues != readingValues ||
+        oldDelegate.writingValues != writingValues ||
+        oldDelegate.speakingValues != speakingValues ||
+        oldDelegate.listeningValues != listeningValues;
   }
 }
 
@@ -543,7 +641,8 @@ class BarChartPainter extends CustomPainter {
 
     for (int i = 0; i < 4; i++) {
       final x = left + i * (barWidth + gap);
-      final h = (scores[i] / 9) * (bottom - top);
+      final safeScore = scores[i].clamp(0.0, 9.0);
+      final h = (safeScore / 9) * (bottom - top);
 
       final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(x, bottom - h, barWidth, h),
@@ -554,13 +653,27 @@ class BarChartPainter extends CustomPainter {
 
       textPainter.text = TextSpan(
         text: labels[i],
-        style: const TextStyle(color: Colors.grey, fontSize: 12),
+        style: const TextStyle(color: Colors.grey, fontSize: 11),
       );
 
       textPainter.layout();
       textPainter.paint(
         canvas,
         Offset(x + barWidth / 2 - textPainter.width / 2, bottom + 10),
+      );
+
+      textPainter.text = TextSpan(
+        text: safeScore.toStringAsFixed(1),
+        style: const TextStyle(
+          color: Color(0xFF111827),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(
+        canvas,
+        Offset(x + barWidth / 2 - textPainter.width / 2, bottom - h - 18),
       );
     }
 
@@ -586,8 +699,14 @@ class BarChartPainter extends CustomPainter {
 }
 
 class DonutChartPainter extends CustomPainter {
+  final List<double> scores;
+
+  DonutChartPainter({required this.scores});
+
   @override
   void paint(Canvas canvas, Size size) {
+    final total = scores.fold<double>(0.0, (sum, value) => sum + value);
+
     final center = Offset(size.width / 2, size.height / 2);
     final radius = min(size.width, size.height) / 2 - 25;
 
@@ -596,8 +715,6 @@ class DonutChartPainter extends CustomPainter {
       ..strokeWidth = 48
       ..strokeCap = StrokeCap.butt;
 
-    final values = [25.0, 20.0, 15.0, 40.0];
-
     final colors = [
       const Color(0xFFE82429),
       const Color(0xFFF23863),
@@ -605,10 +722,16 @@ class DonutChartPainter extends CustomPainter {
       const Color(0xFFFF6B16),
     ];
 
+    if (total <= 0) {
+      paint.color = const Color(0xFFE5E7EB);
+      canvas.drawCircle(center, radius, paint);
+      return;
+    }
+
     double start = -pi / 2;
 
-    for (int i = 0; i < values.length; i++) {
-      final sweep = (values[i] / 100) * 2 * pi;
+    for (int i = 0; i < scores.length; i++) {
+      final sweep = (scores[i] / total) * 2 * pi;
       paint.color = colors[i];
 
       canvas.drawArc(
@@ -621,10 +744,40 @@ class DonutChartPainter extends CustomPainter {
 
       start += sweep;
     }
+
+    final avg = total / scores.where((s) => s > 0).length.clamp(1, 4);
+
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
+
+    textPainter.text = TextSpan(
+      text: avg.toStringAsFixed(1),
+      style: const TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(center.dx - textPainter.width / 2, center.dy - 24),
+    );
+
+    textPainter.text = const TextSpan(
+      text: "Average",
+      style: TextStyle(color: Colors.grey, fontSize: 13),
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(center.dx - textPainter.width / 2, center.dy + 10),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant DonutChartPainter oldDelegate) {
+    return oldDelegate.scores != scores;
+  }
 }
 
 class _LegendGrid extends StatelessWidget {
@@ -639,13 +792,13 @@ class _LegendGrid extends StatelessWidget {
             Expanded(
               child: _LegendItem(
                 color: Color(0xFFE82429),
-                text: "Grammar",
+                text: "Writing",
               ),
             ),
             Expanded(
               child: _LegendItem(
                 color: Color(0xFFF23863),
-                text: "Vocabulary",
+                text: "Speaking",
               ),
             ),
           ],
@@ -656,13 +809,13 @@ class _LegendGrid extends StatelessWidget {
             Expanded(
               child: _LegendItem(
                 color: Color(0xFFE6459B),
-                text: "Fluency",
+                text: "Reading",
               ),
             ),
             Expanded(
               child: _LegendItem(
                 color: Color(0xFFFF6B16),
-                text: "Comprehension",
+                text: "Listening",
               ),
             ),
           ],
