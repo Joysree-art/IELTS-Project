@@ -123,7 +123,8 @@ class ListeningPracticeListPage extends StatefulWidget {
       _ListeningPracticeListPageState();
 }
 
-class _ListeningPracticeListPageState extends State<ListeningPracticeListPage> {
+class _ListeningPracticeListPageState
+    extends State<ListeningPracticeListPage> {
   final supabase = Supabase.instance.client;
   bool loading = true;
   List<Map<String, dynamic>> sections = [];
@@ -182,12 +183,13 @@ class _ListeningPracticeListPageState extends State<ListeningPracticeListPage> {
                         contentPadding: const EdgeInsets.all(18),
                         leading: CircleAvatar(
                           backgroundColor: Colors.red.shade100,
-                          child:
-                              const Icon(Icons.headphones, color: Colors.red),
+                          child: const Icon(Icons.headphones,
+                              color: Colors.red),
                         ),
                         title: Text(
                           section['title'],
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style:
+                              const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         subtitle: Text(test?['title'] ?? 'IELTS Listening'),
                         trailing: const Icon(Icons.arrow_forward_ios),
@@ -220,7 +222,8 @@ class FullListeningTestListPage extends StatefulWidget {
       _FullListeningTestListPageState();
 }
 
-class _FullListeningTestListPageState extends State<FullListeningTestListPage> {
+class _FullListeningTestListPageState
+    extends State<FullListeningTestListPage> {
   final supabase = Supabase.instance.client;
   bool loading = true;
   List<Map<String, dynamic>> tests = [];
@@ -277,14 +280,16 @@ class _FullListeningTestListPageState extends State<FullListeningTestListPage> {
                         contentPadding: const EdgeInsets.all(18),
                         leading: CircleAvatar(
                           backgroundColor: Colors.red.shade100,
-                          child:
-                              const Icon(Icons.assignment, color: Colors.red),
+                          child: const Icon(Icons.assignment,
+                              color: Colors.red),
                         ),
                         title: Text(
                           test['title'],
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style:
+                              const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: const Text("Full IELTS Listening Test"),
+                        subtitle:
+                            const Text("Full IELTS Listening Test"),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
                           Navigator.push(
@@ -353,7 +358,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
 
   String formatDuration(Duration d) {
     final minutes = d.inMinutes.toString().padLeft(2, '0');
-    final seconds = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    final seconds =
+        d.inSeconds.remainder(60).toString().padLeft(2, '0');
     return '$minutes:$seconds';
   }
 
@@ -394,23 +400,19 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   void setupAudioStateListeners() {
     audioPlayer.onDurationChanged.listen((duration) {
       if (!mounted) return;
-      setState(() {
-        audioDuration = duration;
-      });
+      setState(() => audioDuration = duration);
     });
 
     audioPlayer.onPositionChanged.listen((position) {
       if (!mounted) return;
-      setState(() {
-        audioPosition = position;
-      });
+      if (position.inSeconds != audioPosition.inSeconds) {
+        setState(() => audioPosition = position);
+      }
     });
 
     audioPlayer.onPlayerStateChanged.listen((state) {
       if (!mounted) return;
-      setState(() {
-        isPlaying = state == PlayerState.playing;
-      });
+      setState(() => isPlaying = state == PlayerState.playing);
     });
   }
 
@@ -421,17 +423,13 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
       if (testRemaining.inSeconds <= 0) {
         timer.cancel();
         audioPlayer.stop();
-
-        if (!submitted) {
-          submitTest();
-        }
+        if (!submitted) submitTest();
         return;
       }
-
       if (!mounted) return;
-
       setState(() {
-        testRemaining = Duration(seconds: testRemaining.inSeconds - 1);
+        testRemaining =
+            Duration(seconds: testRemaining.inSeconds - 1);
       });
     });
   }
@@ -455,10 +453,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
       }
 
       sections = List<Map<String, dynamic>>.from(sectionData);
-
-      sections.sort(
-        (a, b) => (a['section_no'] as int).compareTo(b['section_no'] as int),
-      );
+      sections.sort((a, b) =>
+          (a['section_no'] as int).compareTo(b['section_no'] as int));
 
       for (final section in sections) {
         final questionData = await supabase
@@ -470,34 +466,29 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
         final qList = List<Map<String, dynamic>>.from(questionData);
 
         qList.sort((a, b) {
-          final aNo = extractQuestionNumber(a['question_no'].toString());
-          final bNo = extractQuestionNumber(b['question_no'].toString());
+          final aNo =
+              extractQuestionNumber(a['question_no'].toString());
+          final bNo =
+              extractQuestionNumber(b['question_no'].toString());
           return aNo.compareTo(bNo);
         });
 
         questionsBySection[section['id']] = qList;
       }
 
-      setState(() {
-        loading = false;
-      });
+      setState(() => loading = false);
     } catch (e) {
-      debugPrint('Fetch listening test data error: $e');
-      if (!mounted) return;
-      setState(() {
-        loading = false;
-      });
+      debugPrint("fetchTestData error: $e");
+      setState(() => loading = false);
     }
   }
 
   Future<void> playSingleAudio(String audioUrl) async {
     await audioPlayer.stop();
-
     setState(() {
       audioPosition = Duration.zero;
       audioDuration = Duration.zero;
     });
-
     await audioPlayer.play(UrlSource(audioUrl));
   }
 
@@ -527,87 +518,97 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     });
 
     startTestTimer();
-
     currentAudioIndex = 0;
     await audioPlayer.stop();
-    await audioPlayer.play(UrlSource(sections[currentAudioIndex]['audio_url']));
+    await audioPlayer
+        .play(UrlSource(sections[currentAudioIndex]['audio_url']));
   }
 
   void setAnswer(String questionId, dynamic answer) {
-    setState(() {
-      userAnswers[questionId] = answer;
-    });
+    setState(() => userAnswers[questionId] = answer);
   }
 
   String normalize(dynamic value) {
     return value.toString().replaceAll('"', '').trim().toLowerCase();
   }
 
+  // Returns true only if the entire question is 100% correct.
+  // Used for is_correct flag saved to Supabase.
   bool checkAnswer(Map<String, dynamic> question) {
+    return calculateScore(question) == (question['marks'] ?? 1) as int;
+  }
+
+  // Returns actual marks earned (supports partial credit).
+  // matching  → 1 mark per correct pair
+  // multi_mcq → 1 mark per correct choice selected (no negative marking)
+  // all others → full marks or 0
+  int calculateScore(Map<String, dynamic> question) {
     final qid = question['id'];
     final type = question['question_type'];
     final correct = question['correct_answer'];
     final user = userAnswers[qid];
+    final totalMarks = (question['marks'] ?? 1) as int;
 
-    if (user == null) return false;
+    if (user == null) return 0;
 
     if (type == 'completion' || type == 'short_answer') {
-      return normalize(user) == normalize(correct);
+      return normalize(user) == normalize(correct) ? totalMarks : 0;
     }
 
     if (type == 'mcq' || type == 'map') {
-      return normalize(user) == normalize(correct);
+      return normalize(user) == normalize(correct) ? totalMarks : 0;
     }
 
     if (type == 'multi_mcq') {
-      final userList = List<String>.from(user ?? [])..sort();
-      final correctList = List<String>.from(correct ?? [])..sort();
-
-      if (userList.length != correctList.length) return false;
-
-      for (int i = 0; i < correctList.length; i++) {
-        if (normalize(userList[i]) != normalize(correctList[i])) {
-          return false;
-        }
+      final userList =
+          List<String>.from(user ?? []).map((e) => normalize(e)).toList();
+      final correctList =
+          List<String>.from(correct ?? []).map((e) => normalize(e)).toList();
+      int earned = 0;
+      for (final chosen in userList) {
+        if (correctList.contains(chosen)) earned++;
       }
-
-      return true;
+      return earned.clamp(0, totalMarks);
     }
 
     if (type == 'matching') {
-      if (user is! Map || correct is! Map) return false;
-
+      if (user is! Map || correct is! Map) return 0;
+      final correctPairs = correct.length;
+      if (correctPairs == 0) return 0;
+      int correctCount = 0;
       for (final key in correct.keys) {
-        if (normalize(user[key]) != normalize(correct[key])) {
-          return false;
+        if (user[key] != null &&
+            normalize(user[key]) == normalize(correct[key])) {
+          correctCount++;
         }
       }
-
-      return true;
+      final marksPerPair = totalMarks / correctPairs;
+      return (correctCount * marksPerPair).floor();
     }
 
-    return false;
+    return 0;
   }
 
   int get totalQuestions {
     int total = 0;
     for (final qList in questionsBySection.values) {
-      total += qList.length;
+      for (final q in qList) {
+        total += (q['marks'] ?? 1) as int;
+      }
     }
     return total;
   }
 
   int get correctCount {
-    int count = 0;
-
+    int score = 0;
     for (final qList in questionsBySection.values) {
       for (final q in qList) {
-        if (checkAnswer(q)) count++;
+        score += calculateScore(q);
       }
     }
-
-    return count;
+    return score;
   }
+
 
   double listeningBand(int score) {
     if (score >= 39) return 9.0;
@@ -621,14 +622,16 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
     if (score >= 16) return 5.0;
     if (score >= 13) return 4.5;
     if (score >= 10) return 4.0;
-    return 3.5;
+    if (score >= 6) return 3.0;
+    if (score >= 3) return 2.0;
+    if (score >= 1) return 1.0;
+    return 0.0;
   }
 
   Future<void> submitTest() async {
     if (submitted) return;
 
     final user = supabase.auth.currentUser;
-
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please login first")),
@@ -641,7 +644,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
 
     final score = correctCount;
     final total = totalQuestions;
-    final percentage = total == 0 ? 0 : ((score / total) * 100).round();
+    final percentage =
+        total == 0 ? 0 : ((score / total) * 100).round();
     final band = listeningBand(score);
 
     final attempt = await supabase
@@ -656,12 +660,22 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
         })
         .select()
         .single();
+
     await supabase.from('ielts_scores').insert({
       'user_id': user.id,
       'module': 'listening',
       'band_score': band,
       'created_at': DateTime.now().toIso8601String(),
     });
+
+    if (widget.isFullTest) {
+      await supabase.from('homepage_scores').insert({
+        'user_id': user.id,
+        'module': 'listening',
+        'band_score': band,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
 
     for (final qList in questionsBySection.values) {
       for (final q in qList) {
@@ -675,9 +689,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
       }
     }
 
-    setState(() {
-      submitted = true;
-    });
+    setState(() => submitted = true);
   }
 
   Widget practiceAudioControl(String audioUrl) {
@@ -693,7 +705,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
           Row(
             children: [
               IconButton(
-                icon: Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                icon:
+                    Icon(isPlaying ? Icons.pause : Icons.play_arrow),
                 color: Colors.red,
                 iconSize: 34,
                 onPressed: () async {
@@ -714,9 +727,9 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                 onPressed: () {
                   final newPosition =
                       audioPosition - const Duration(seconds: 10);
-                  seekPracticeAudio(
-                    newPosition < Duration.zero ? Duration.zero : newPosition,
-                  );
+                  seekPracticeAudio(newPosition < Duration.zero
+                      ? Duration.zero
+                      : newPosition);
                 },
               ),
               IconButton(
@@ -725,9 +738,9 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                 onPressed: () {
                   final newPosition =
                       audioPosition + const Duration(seconds: 10);
-                  seekPracticeAudio(
-                    newPosition > audioDuration ? audioDuration : newPosition,
-                  );
+                  seekPracticeAudio(newPosition > audioDuration
+                      ? audioDuration
+                      : newPosition);
                 },
               ),
               Expanded(
@@ -741,8 +754,11 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
           ),
           Slider(
             value: audioPosition.inSeconds
-                .clamp(0,
-                    audioDuration.inSeconds > 0 ? audioDuration.inSeconds : 1)
+                .clamp(
+                    0,
+                    audioDuration.inSeconds > 0
+                        ? audioDuration.inSeconds
+                        : 1)
                 .toDouble(),
             min: 0,
             max: audioDuration.inSeconds > 0
@@ -807,9 +823,9 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
             child: ElevatedButton.icon(
               onPressed: fullTestStarted ? null : playFullTestAudio,
               icon: const Icon(Icons.play_arrow),
-              label: Text(
-                fullTestStarted ? "Test Running" : "Start Full Listening Test",
-              ),
+              label: Text(fullTestStarted
+                  ? "Test Running"
+                  : "Start Full Listening Test"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
                 foregroundColor: Colors.white,
@@ -826,8 +842,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   Widget build(BuildContext context) {
     if (loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+          body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -846,7 +861,8 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                 children: [
                   if (widget.isFullTest) fullTestAudioBox(),
                   ...sections.map((section) {
-                    final questions = questionsBySection[section['id']] ?? [];
+                    final questions =
+                        questionsBySection[section['id']] ?? [];
 
                     return Container(
                       margin: const EdgeInsets.only(bottom: 24),
@@ -868,10 +884,13 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                           ),
                           const SizedBox(height: 8),
                           if (section['instructions'] != null &&
-                              section['instructions'].toString().isNotEmpty)
+                              section['instructions']
+                                  .toString()
+                                  .isNotEmpty)
                             Text(
                               section['instructions'],
-                              style: const TextStyle(color: Colors.grey),
+                              style:
+                                  const TextStyle(color: Colors.grey),
                             ),
                           if (!widget.isFullTest) ...[
                             const SizedBox(height: 16),
@@ -883,8 +902,10 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                               question: q,
                               userAnswer: userAnswers[q['id']],
                               submitted: submitted,
-                              isCorrect: submitted ? checkAnswer(q) : null,
-                              onChanged: (answer) => setAnswer(q['id'], answer),
+                              earnedMarks: submitted ? calculateScore(q) : null,
+                              totalMarks: (q['marks'] ?? 1) as int,
+                              onChanged: (answer) =>
+                                  setAnswer(q['id'], answer),
                             );
                           }),
                         ],
@@ -922,11 +943,14 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
   }
 }
 
+// ─── Question Widget ──────────────────────────────────────────────────────────
+
 class QuestionWidget extends StatelessWidget {
   final Map<String, dynamic> question;
   final dynamic userAnswer;
   final bool submitted;
-  final bool? isCorrect;
+  final int? earnedMarks;
+  final int totalMarks;
   final Function(dynamic) onChanged;
 
   const QuestionWidget({
@@ -934,9 +958,15 @@ class QuestionWidget extends StatelessWidget {
     required this.question,
     required this.userAnswer,
     required this.submitted,
-    required this.isCorrect,
+    required this.earnedMarks,
+    required this.totalMarks,
     required this.onChanged,
   });
+
+  // Fully correct only if earned == total
+  bool get isFullyCorrect => earnedMarks != null && earnedMarks == totalMarks;
+  // Partially correct (matching / multi_mcq)
+  bool get isPartial => earnedMarks != null && earnedMarks! > 0 && earnedMarks! < totalMarks;
 
   @override
   Widget build(BuildContext context) {
@@ -944,20 +974,31 @@ class QuestionWidget extends StatelessWidget {
 
     if (type == 'mcq') return buildMcq();
     if (type == 'multi_mcq') return buildMultiMcq();
-    if (type == 'completion' || type == 'short_answer') return buildTextField();
+    if (type == 'completion' || type == 'short_answer')
+      return buildTextField();
     if (type == 'matching') return buildMatching();
     if (type == 'map') return buildMap();
 
     return const SizedBox();
   }
 
-  Widget resultIcon() {
-    if (!submitted) return const SizedBox();
+  String normalize(dynamic value) =>
+      value.toString().replaceAll('"', '').trim().toLowerCase();
 
-    return Icon(
-      isCorrect == true ? Icons.check_circle : Icons.cancel,
-      color: isCorrect == true ? Colors.green : Colors.red,
-    );
+  Widget resultIcon() {
+    if (!submitted || earnedMarks == null) return const SizedBox();
+    if (isFullyCorrect) {
+      return const Icon(Icons.check_circle, color: Colors.green);
+    }
+    if (isPartial) {
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.check_circle_outline, color: Colors.orange, size: 20),
+        const SizedBox(width: 3),
+        Text('+$earnedMarks', style: const TextStyle(
+          color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 13)),
+      ]);
+    }
+    return const Icon(Icons.cancel, color: Colors.red);
   }
 
   Widget buildContextBlock() {
@@ -987,15 +1028,17 @@ class QuestionWidget extends StatelessWidget {
   }
 
   Widget buildBase({required Widget child}) {
+    Color bgColor = const Color(0xFFFFFBFB);
+    if (submitted) {
+      if (isFullyCorrect) bgColor = const Color(0xFFDCFCE7);
+      else if (isPartial) bgColor = const Color(0xFFFFF3CD);
+      else bgColor = const Color(0xFFFEE2E2);
+    }
     return Container(
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: submitted
-            ? isCorrect == true
-                ? const Color(0xFFDCFCE7)
-                : const Color(0xFFFEE2E2)
-            : const Color(0xFFFFFBFB),
+        color: bgColor,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: Colors.red.shade100),
       ),
@@ -1032,7 +1075,8 @@ class QuestionWidget extends StatelessWidget {
           if (submitted)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text("Correct answer: ${question['correct_answer']}"),
+              child: Text(
+                  "Correct answer: ${question['correct_answer']}"),
             ),
         ],
       ),
@@ -1060,7 +1104,9 @@ class QuestionWidget extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           ...options.map((option) {
-            final letter = option.substring(0, 1);
+            final split = option.split('.');
+            final letter =
+                split.isNotEmpty ? split[0].trim() : option;
 
             return RadioListTile<String>(
               value: letter,
@@ -1069,15 +1115,24 @@ class QuestionWidget extends StatelessWidget {
               title: Text(option),
             );
           }),
-          if (submitted) Text("Correct answer: ${question['correct_answer']}"),
+          if (submitted)
+            Text("Correct answer: ${question['correct_answer']}"),
         ],
       ),
     );
   }
 
+  // ── FIX 1: Multi MCQ ───────────────────────────────────────────────
+  // Was: CheckboxListTile with title: Text(option) — overflows on one line
+  // Now: custom tile with wrapped text and per-option correct/wrong colour
   Widget buildMultiMcq() {
     final options = List<String>.from(question['options'] ?? []);
     final current = List<String>.from(userAnswer ?? []);
+    final correctList = submitted
+        ? List<String>.from(question['correct_answer'] ?? [])
+            .map((e) => normalize(e))
+            .toList()
+        : <String>[];
 
     return buildBase(
       child: Column(
@@ -1095,47 +1150,130 @@ class QuestionWidget extends StatelessWidget {
               resultIcon(),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           const Text(
             "Choose TWO answers.",
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
           const SizedBox(height: 12),
           ...options.map((option) {
-            final letter = option.substring(0, 1);
-            final selected = current.contains(letter);
+            final letter = option.isNotEmpty ? option[0] : option;
+            final isSelected = current.contains(letter);
+            final isCorrectOption =
+                submitted && correctList.contains(normalize(letter));
+            final isWrongSelection =
+                submitted && isSelected && !isCorrectOption;
 
-            return CheckboxListTile(
-              value: selected,
-              title: Text(option),
-              onChanged: submitted
+            Color bgColor = Colors.transparent;
+            Color borderColor = Colors.grey.shade300;
+
+            if (submitted) {
+              if (isCorrectOption) {
+                bgColor = const Color(0xFFDCFCE7);
+                borderColor = Colors.green;
+              } else if (isWrongSelection) {
+                bgColor = const Color(0xFFFEE2E2);
+                borderColor = Colors.red;
+              }
+            } else if (isSelected) {
+              bgColor = Colors.red.shade50;
+              borderColor = Colors.red;
+            }
+
+            return GestureDetector(
+              onTap: submitted
                   ? null
-                  : (value) {
+                  : () {
                       final updated = List<String>.from(current);
-
-                      if (value == true) {
-                        if (!updated.contains(letter) && updated.length < 2) {
-                          updated.add(letter);
-                        }
-                      } else {
+                      if (isSelected) {
                         updated.remove(letter);
+                      } else if (updated.length < 2) {
+                        updated.add(letter);
                       }
-
                       onChanged(updated);
                     },
+              child: Container(
+                width: double.infinity,
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Checkbox indicator
+                    Container(
+                      width: 22,
+                      height: 22,
+                      margin: const EdgeInsets.only(right: 10, top: 1),
+                      decoration: BoxDecoration(
+                        color: isSelected && !submitted
+                            ? Colors.red
+                            : submitted && isCorrectOption
+                                ? Colors.green
+                                : submitted && isWrongSelection
+                                    ? Colors.red
+                                    : Colors.white,
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                          color: isSelected || (submitted && isCorrectOption)
+                              ? Colors.transparent
+                              : Colors.grey.shade400,
+                        ),
+                      ),
+                      child: isSelected || (submitted && isCorrectOption)
+                          ? const Icon(Icons.check,
+                              size: 14, color: Colors.white)
+                          : null,
+                    ),
+                    // Option text — wraps naturally
+                    Expanded(
+                      child: Text(
+                        option,
+                        style: const TextStyle(fontSize: 15, height: 1.4),
+                      ),
+                    ),
+                    if (submitted && isCorrectOption)
+                      const Icon(Icons.check_circle,
+                          color: Colors.green, size: 18),
+                    if (submitted && isWrongSelection)
+                      const Icon(Icons.cancel,
+                          color: Colors.red, size: 18),
+                  ],
+                ),
+              ),
             );
           }),
-          if (submitted) Text("Correct answer: ${question['correct_answer']}"),
+          if (submitted)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                "Correct answers: ${question['correct_answer']}",
+                style: const TextStyle(
+                    color: Colors.green, fontWeight: FontWeight.w600),
+              ),
+            ),
         ],
       ),
     );
   }
 
+  // ── FIX 2: Matching ────────────────────────────────────────────────
+  // Was: entire card red/green based on all-or-nothing isCorrect
+  // Now: each row shows its own correct/wrong colour independently,
+  //      card background stays neutral
   Widget buildMatching() {
     final options = question['options'] ?? {};
     final items = List<String>.from(options['items'] ?? []);
     final choices = List<String>.from(options['choices'] ?? []);
     final current = Map<String, dynamic>.from(userAnswer ?? {});
+    final correctMap = submitted && question['correct_answer'] is Map
+        ? Map<String, dynamic>.from(question['correct_answer'])
+        : <String, dynamic>{};
 
     final startNo = int.tryParse(
           RegExp(r'\d+')
@@ -1145,58 +1283,152 @@ class QuestionWidget extends StatelessWidget {
         ) ??
         0;
 
-    return buildBase(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        // Neutral background — per-row colouring handles feedback
+        color: const Color(0xFFFFFBFB),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.red.shade100),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           buildContextBlock(),
-          Text(
-            "Q${question['question_no']}. ${question['question_text']}",
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Q${question['question_no']}. ${question['question_text']}",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+              // Show overall icon only after submission
+              if (submitted && earnedMarks != null)
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(
+                    isFullyCorrect ? Icons.check_circle
+                        : isPartial ? Icons.check_circle_outline
+                        : Icons.cancel,
+                    color: isFullyCorrect ? Colors.green
+                        : isPartial ? Colors.orange
+                        : Colors.red,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 4),
+                  Text('$earnedMarks/$totalMarks',
+                    style: TextStyle(
+                      color: isFullyCorrect ? Colors.green
+                          : isPartial ? Colors.orange : Colors.red,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    )),
+                ]),
+            ],
           ),
           const SizedBox(height: 12),
           ...items.asMap().entries.map((entry) {
             final index = entry.key;
             final item = entry.value;
             final displayNumber = startNo + index;
+            final userVal = current[item];
+            final correctVal = correctMap[item];
 
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
+            // Per-row correctness
+            final rowCorrect = submitted &&
+                userVal != null &&
+                normalize(userVal) == normalize(correctVal ?? '');
+            final rowWrong = submitted &&
+                userVal != null &&
+                normalize(userVal) != normalize(correctVal ?? '');
+            final rowUnanswered = submitted && userVal == null;
+
+            Color rowBg = Colors.transparent;
+            if (rowCorrect) rowBg = const Color(0xFFDCFCE7);
+            if (rowWrong) rowBg = const Color(0xFFFEE2E2);
+            if (rowUnanswered) rowBg = Colors.grey.shade100;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: rowBg,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: rowCorrect
+                      ? Colors.green.shade300
+                      : rowWrong
+                          ? Colors.red.shade300
+                          : Colors.grey.shade200,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 135,
-                    child: Text(
-                      "$displayNumber. $item",
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: current[item],
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
+                  Row(
+                    children: [
+                      SizedBox(
+                        width: 135,
+                        child: Text(
+                          "$displayNumber. $item",
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600),
+                        ),
                       ),
-                      items: choices.map((choice) {
-                        return DropdownMenuItem(
-                          value: choice,
-                          child: Text(choice),
-                        );
-                      }).toList(),
-                      onChanged: submitted
-                          ? null
-                          : (value) {
-                              current[item] = value;
-                              onChanged(current);
-                            },
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: current[item],
+                          decoration: const InputDecoration(
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          items: choices.map((choice) {
+                            return DropdownMenuItem(
+                              value: choice,
+                              child: Text(choice),
+                            );
+                          }).toList(),
+                          onChanged: submitted
+                              ? null
+                              : (value) {
+                                  current[item] = value;
+                                  onChanged(current);
+                                },
+                        ),
+                      ),
+                      if (submitted) ...[
+                        const SizedBox(width: 8),
+                        Icon(
+                          rowCorrect
+                              ? Icons.check_circle
+                              : Icons.cancel,
+                          color:
+                              rowCorrect ? Colors.green : Colors.red,
+                          size: 20,
+                        ),
+                      ],
+                    ],
                   ),
+                  // Show correct answer for wrong rows
+                  if (rowWrong)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 4),
+                      child: Text(
+                        "Correct: $correctVal",
+                        style: const TextStyle(
+                          color: Colors.green,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );
           }),
-          if (submitted) Text("Correct answer: ${question['correct_answer']}"),
         ],
       ),
     );
@@ -1237,12 +1469,15 @@ class QuestionWidget extends StatelessWidget {
             }).toList(),
             onChanged: submitted ? null : onChanged,
           ),
-          if (submitted) Text("Correct answer: ${question['correct_answer']}"),
+          if (submitted)
+            Text("Correct answer: ${question['correct_answer']}"),
         ],
       ),
     );
   }
 }
+
+// ─── Result Box ───────────────────────────────────────────────────────────────
 
 class ResultBox extends StatelessWidget {
   final int score;
@@ -1258,7 +1493,8 @@ class ResultBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage = total == 0 ? 0 : ((score / total) * 100).round();
+    final percentage =
+        total == 0 ? 0 : ((score / total) * 100).round();
 
     return Container(
       width: double.infinity,
@@ -1305,6 +1541,8 @@ class ResultBox extends StatelessWidget {
   }
 }
 
+// ─── Option Card ──────────────────────────────────────────────────────────────
+
 class _OptionCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -1322,7 +1560,8 @@ class _OptionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
         onTap: onTap,
@@ -1348,7 +1587,8 @@ class _OptionCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Text(subtitle, style: const TextStyle(color: Colors.grey)),
+                    Text(subtitle,
+                        style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),

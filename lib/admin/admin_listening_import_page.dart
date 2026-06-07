@@ -8,7 +8,7 @@ class AdminListeningPage extends StatefulWidget {
   @override
   State<AdminListeningPage> createState() => _AdminListeningPageState();
 }
-
+final marksController = TextEditingController();
 class _AdminListeningPageState extends State<AdminListeningPage> {
   final supabase = Supabase.instance.client;
 
@@ -181,8 +181,12 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
     if (text.isEmpty) return null;
 
     if (selectedType == 'mcq' || selectedType == 'multi_mcq') {
-      return text.split('\n').map((e) => e.trim()).toList();
-    }
+  return optionsText.text
+      .split('\n')
+      .map((e) => e.trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+}
 
     if (selectedType == 'matching') {
       return jsonDecode(text);
@@ -215,6 +219,7 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
     if (selectedSectionId == null) {
       showMsg('Select section first');
       return;
+      
     }
 
     if (questionNo.text.trim().isEmpty ||
@@ -235,6 +240,7 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
         'options': formatOptions(),
         'correct_answer': formatAnswer(),
         'image_url': imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+        'marks': int.tryParse(marksController.text.trim()) ?? 1,
       });
 
       clearQuestionFields();
@@ -290,6 +296,7 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
         'options': formatOptions(),
         'correct_answer': formatAnswer(),
         'image_url': imageUrl.text.trim().isEmpty ? null : imageUrl.text.trim(),
+        'marks': int.tryParse(marksController.text.trim()) ?? 1,
       }).eq('id', editingQuestionId!);
 
       clearQuestionFields();
@@ -318,6 +325,7 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
     optionsText.clear();
     answerText.clear();
     imageUrl.clear();
+    marksController.clear();
   }
 
   void cancelEdit() {
@@ -508,6 +516,7 @@ if (sections.isNotEmpty) ...[
               maxLines: 4,
             ),
             input(questionText, 'Question text', maxLines: 3),
+            input(marksController, 'Marks for this question'),
             input(optionsText, 'Options: ${optionHint()}', maxLines: 5),
             input(answerText, 'Correct answer: ${answerHint()}', maxLines: 3),
 

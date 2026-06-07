@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'reading_practice_list_page.dart';
 
+import 'reading_practice_list_page.dart';
 import 'writing_page.dart';
 import 'speaking_page.dart';
-import 'reading_page.dart';
 import 'listening/listening_page.dart';
 import 'profile_page.dart';
 import 'analytics_page.dart';
@@ -17,20 +16,29 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final supabase = Supabase.instance.client;
+
   String? avatarUrl;
+  bool isLoadingScores = true;
+
+  double writingScore = 0;
+  double speakingScore = 0;
+  double readingScore = 0;
+  double listeningScore = 0;
 
   @override
   void initState() {
     super.initState();
     loadProfileImage();
+    fetchLatestScores();
   }
 
   Future<void> loadProfileImage() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = supabase.auth.currentUser;
     if (user == null) return;
 
     try {
-      final data = await Supabase.instance.client
+      final data = await supabase
           .from('profiles')
           .select('avatar_url')
           .eq('id', user.id)
@@ -44,6 +52,63 @@ class _HomePageState extends State<HomePage> {
     } catch (e) {
       debugPrint('Failed to load profile image: $e');
     }
+  }
+
+  Future<void> fetchLatestScores() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      setState(() => isLoadingScores = false);
+      return;
+    }
+
+    try {
+      final data = await supabase
+          .from('homepage_scores')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      double latestWriting = 0;
+      double latestSpeaking = 0;
+      double latestReading = 0;
+      double latestListening = 0;
+
+      for (final item in data) {
+        final module = item['module'].toString().toLowerCase();
+        final score = (item['band_score'] as num).toDouble();
+
+        if (module == 'writing' && latestWriting == 0) {
+          latestWriting = score;
+        } else if (module == 'speaking' && latestSpeaking == 0) {
+          latestSpeaking = score;
+        } else if (module == 'reading' && latestReading == 0) {
+          latestReading = score;
+        } else if (module == 'listening' && latestListening == 0) {
+          latestListening = score;
+        }
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        writingScore = latestWriting;
+        speakingScore = latestSpeaking;
+        readingScore = latestReading;
+        listeningScore = latestListening;
+        isLoadingScores = false;
+      });
+    } catch (e) {
+      debugPrint('Failed to load latest scores: $e');
+      if (!mounted) return;
+      setState(() => isLoadingScores = false);
+    }
+  }
+
+  String scoreText(double score) {
+    if (isLoadingScores) return "...";
+    if (score <= 0) return "Not attempted";
+    return score.toStringAsFixed(1);
   }
 
   Future<void> openProfilePage() async {
@@ -65,175 +130,214 @@ class _HomePageState extends State<HomePage> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 430),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  /// TOP BAR
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        "IELTSync",
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await loadProfileImage();
+                await fetchLatestScores();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// TOP BAR
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "IELTSync",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 3),
+                            Text(
+                              "Practice. Improve. Achieve.",
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                        GestureDetector(
+                          onTap: openProfilePage,
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: Colors.red.shade100,
+                            backgroundImage:
+                                hasAvatar ? NetworkImage(avatarUrl!) : null,
+                            child: !hasAvatar
+                                ? const Icon(Icons.person, color: Colors.red)
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    const Text(
+                      "Latest Results",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
+
+                    /// SCORE CARDS
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 1.1,
+                      children: [
+                        ScoreCard(
+                          title: "Writing",
+                          score: scoreText(writingScore),
+                          icon: Icons.edit,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const WritingPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        ScoreCard(
+                          title: "Speaking",
+                          score: scoreText(speakingScore),
+                          icon: Icons.mic,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SpeakingPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        ScoreCard(
+                          title: "Reading",
+                          score: scoreText(readingScore),
+                          icon: Icons.menu_book,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const ReadingPracticeListPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        ScoreCard(
+                          title: "Listening",
+                          score: scoreText(listeningScore),
+                          icon: Icons.headphones,
+                          onTap: () {
+                            Navigator.push(
+                             context,
+                             MaterialPageRoute(
+                             builder: (_) => const ListeningPage(),
+                              ),
+                             );
+                         
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    /// QUICK ACTION TITLE
+                    const Text(
+                      "Quick Actions",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    ActionTile(
+                      title: "Practice Writing",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WritingPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    ActionTile(
+                      title: "Start Speaking",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SpeakingPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    ActionTile(
+                      title: "Take Reading Test",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ReadingPracticeListPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    ActionTile(
+                      title: "Listening Practice",
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ListeningPage(),
+                          ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Text(
+                        "Every practice session brings you closer to your target IELTS band.",
                         style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          color: Colors.red,
+                          fontWeight: FontWeight.w600,
+                          height: 1.4,
                         ),
                       ),
-                      GestureDetector(
-                        onTap: openProfilePage,
-                        child: CircleAvatar(
-                          radius: 22,
-                          backgroundColor: Colors.red.shade100,
-                          backgroundImage:
-                              hasAvatar ? NetworkImage(avatarUrl!) : null,
-                          child: !hasAvatar
-                              ? const Icon(
-                                  Icons.person,
-                                  color: Colors.red,
-                                )
-                              : null,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
 
-                  const SizedBox(height: 25),
-
-                  /// SCORE CARDS
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 1.1,
-                    children: [
-                      ScoreCard(
-                        title: "Writing",
-                        score: "6.0",
-                        icon: Icons.edit,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const WritingPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      ScoreCard(
-                        title: "Speaking",
-                        score: "7.0",
-                        icon: Icons.mic,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SpeakingPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      ScoreCard(
-                        title: "Reading",
-                        score: "6.5",
-                        icon: Icons.menu_book,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ReadingPracticeListPage(),
-                            ),
-                          );
-                        },
-                      ),
-                      ScoreCard(
-                        title: "Listening",
-                        score: "6.5",
-                        icon: Icons.headphones,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ListeningPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  /// QUICK ACTION TITLE
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "Quick Actions",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "Customize",
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  ActionTile(
-                    title: "Practice Writing",
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const WritingPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  ActionTile(
-                    title: "Start Speaking",
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const SpeakingPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  ActionTile(
-                    title: "Take Reading Test",
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ReadingPracticeListPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  ActionTile(
-                    title: "Listening Practice",
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ListeningPage(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 80),
-                ],
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
           ),
@@ -245,10 +349,11 @@ class _HomePageState extends State<HomePage> {
         unselectedItemColor: Colors.grey,
         onTap: (index) async {
           if (index == 1) {
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const AnalyticsPage()),
             );
+            fetchLatestScores();
           } else if (index == 2) {
             await openProfilePage();
           }
@@ -288,6 +393,8 @@ class ScoreCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasScore = score != "Not attempted" && score != "...";
+
     return Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(16),
@@ -306,17 +413,25 @@ class ScoreCard extends StatelessWidget {
                     backgroundColor: Colors.red.withOpacity(0.1),
                     child: Icon(icon, color: Colors.red),
                   ),
-                  Text(
-                    score,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      score,
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: hasScore ? 18 : 11,
+                        fontWeight: FontWeight.bold,
+                        color: hasScore ? Colors.black : Colors.grey,
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              Text(title),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               const Spacer(),
               Container(
                 height: 4,
@@ -326,7 +441,7 @@ class ScoreCard extends StatelessWidget {
                 ),
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
-                  widthFactor: 0.6,
+                  widthFactor: hasScore ? 0.65 : 0,
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.red,

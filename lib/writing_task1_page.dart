@@ -29,8 +29,7 @@ class _WritingTask1PageState extends State<WritingTask1Page> {
   Future<void> _fetchQuestions() async {
     setState(() => isLoading = true);
     try {
-      final userId = supabase.auth.currentUser?.id;
-
+    
       final data = await supabase
           .from('writing_questions')
           .select()
