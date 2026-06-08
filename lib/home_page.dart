@@ -22,10 +22,11 @@ class _HomePageState extends State<HomePage> {
   bool isLoadingScores = true;
 
   double writingScore = 0;
-  double speakingScore = 0;
-  double readingScore = 0;
-  double listeningScore = 0;
+double speakingScore = 0;
+double readingScore = 0;
+double listeningScore = 0;
 
+String speakingPart = "";
   @override
   void initState() {
     super.initState();
@@ -54,56 +55,59 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> fetchLatestScores() async {
-    final user = supabase.auth.currentUser;
+ Future<void> fetchLatestScores() async {
+  final user = supabase.auth.currentUser;
 
-    if (user == null) {
-      setState(() => isLoadingScores = false);
-      return;
-    }
-
-    try {
-      final data = await supabase
-          .from('homepage_scores')
-          .select()
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false);
-
-      double latestWriting = 0;
-      double latestSpeaking = 0;
-      double latestReading = 0;
-      double latestListening = 0;
-
-      for (final item in data) {
-        final module = item['module'].toString().toLowerCase();
-        final score = (item['band_score'] as num).toDouble();
-
-        if (module == 'writing' && latestWriting == 0) {
-          latestWriting = score;
-        } else if (module == 'speaking' && latestSpeaking == 0) {
-          latestSpeaking = score;
-        } else if (module == 'reading' && latestReading == 0) {
-          latestReading = score;
-        } else if (module == 'listening' && latestListening == 0) {
-          latestListening = score;
-        }
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        writingScore = latestWriting;
-        speakingScore = latestSpeaking;
-        readingScore = latestReading;
-        listeningScore = latestListening;
-        isLoadingScores = false;
-      });
-    } catch (e) {
-      debugPrint('Failed to load latest scores: $e');
-      if (!mounted) return;
-      setState(() => isLoadingScores = false);
-    }
+  if (user == null) {
+    setState(() => isLoadingScores = false);
+    return;
   }
+
+  try {
+    final data = await supabase
+        .from('homepage_scores')
+        .select()
+        .eq('user_id', user.id)
+        .order('created_at', ascending: false);
+
+    double latestWriting = 0;
+    double latestSpeaking = 0;
+    double latestReading = 0;
+    double latestListening = 0;
+    String latestSpeakingPart = "";
+
+    for (final item in data) {
+      final module = item['module'].toString().toLowerCase();
+      final score = (item['band_score'] as num).toDouble();
+
+      if (module == 'writing' && latestWriting == 0) {
+        latestWriting = score;
+      } else if (module == 'speaking' && latestSpeaking == 0) {
+        latestSpeaking = score;
+        latestSpeakingPart = item['part']?.toString() ?? "";
+      } else if (module == 'reading' && latestReading == 0) {
+        latestReading = score;
+      } else if (module == 'listening' && latestListening == 0) {
+        latestListening = score;
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      writingScore = latestWriting;
+      speakingScore = latestSpeaking;
+      speakingPart = latestSpeakingPart;
+      readingScore = latestReading;
+      listeningScore = latestListening;
+      isLoadingScores = false;
+    });
+  } catch (e) {
+    debugPrint('Failed to load latest scores: $e');
+    if (!mounted) return;
+    setState(() => isLoadingScores = false);
+  }
+}
 
   String scoreText(double score) {
     if (isLoadingScores) return "...";
@@ -126,11 +130,8 @@ class _HomePageState extends State<HomePage> {
 
     return Scaffold(
       backgroundColor: const Color(0xffF5F6FA),
-      body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 430),
-            child: RefreshIndicator(
+     body: SafeArea(
+       child: RefreshIndicator(
               onRefresh: () async {
                 await loadProfileImage();
                 await fetchLatestScores();
@@ -201,59 +202,63 @@ class _HomePageState extends State<HomePage> {
                       physics: const NeverScrollableScrollPhysics(),
                       childAspectRatio: 1.1,
                       children: [
+                         ScoreCard(
+  title: "Writing",
+  score: scoreText(writingScore),
+  icon: Icons.edit,
+  onTap: () async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const WritingPage(),
+      ),
+    );
+    fetchLatestScores();
+  },
+),
                         ScoreCard(
-                          title: "Writing",
-                          score: scoreText(writingScore),
-                          icon: Icons.edit,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const WritingPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        ScoreCard(
-                          title: "Speaking",
-                          score: scoreText(speakingScore),
-                          icon: Icons.mic,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const SpeakingPage(),
-                              ),
-                            );
-                          },
-                        ),
+                         title: speakingPart.isEmpty
+                        ? "Speaking"
+                        : "Speaking • $speakingPart",
+                        score: scoreText(speakingScore),
+                        icon: Icons.mic,
+                        onTap: () async {
+                        await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                         builder: (_) => const SpeakingPage(),
+                         ),
+                         );
+                            fetchLatestScores();
+                                 },
+                          ),
                         ScoreCard(
                           title: "Reading",
                           score: scoreText(readingScore),
                           icon: Icons.menu_book,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    const ReadingPracticeListPage(),
-                              ),
-                            );
-                          },
+                         onTap: () async {
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ReadingPracticeListPage(),
+    ),
+  );
+  fetchLatestScores();
+},
                         ),
                         ScoreCard(
                           title: "Listening",
                           score: scoreText(listeningScore),
                           icon: Icons.headphones,
-                          onTap: () {
-                            Navigator.push(
-                             context,
-                             MaterialPageRoute(
-                             builder: (_) => const ListeningPage(),
-                              ),
-                             );
-                         
-                          },
+                         onTap: () async {
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ListeningPage(),
+    ),
+  );
+  fetchLatestScores();
+},
                         ),
                       ],
                     ),
@@ -338,8 +343,8 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 80),
                   ],
                 ),
-              ),
-            ),
+              
+            
           ),
         ),
       ),
@@ -431,24 +436,6 @@ class ScoreCard extends StatelessWidget {
               Text(
                 title,
                 style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const Spacer(),
-              Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: FractionallySizedBox(
-                  alignment: Alignment.centerLeft,
-                  widthFactor: hasScore ? 0.65 : 0,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),

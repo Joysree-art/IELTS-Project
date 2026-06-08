@@ -315,6 +315,15 @@ class _SpeakingPageState extends State<SpeakingPage> {
         'band_score': _bandScore,
       });
 
+      await supabase.from('homepage_scores').insert({
+      'user_id': user?.id,
+     'module': 'speaking',
+     'band_score': _bandScore,
+     'test_type': 'part_test',
+     'part': _selectedPart,
+     'created_at': DateTime.now().toIso8601String(),
+     });
+
       _showMessage("Speaking result saved");
       await _fetchHistory();
     } catch (e) {

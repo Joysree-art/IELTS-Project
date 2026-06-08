@@ -253,6 +253,16 @@ class _ReadingPageState extends State<ReadingPage> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
+      if (currentPracticeType == 'mixed') {
+      await supabase.from('homepage_scores').insert({
+      'user_id': userId,
+      'module': 'reading',
+      'band_score': bandScore,
+      'test_type': 'full_test',
+      'created_at': DateTime.now().toIso8601String(),
+     });
+}
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Reading score saved successfully')),
