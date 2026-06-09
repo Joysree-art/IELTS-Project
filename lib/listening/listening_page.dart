@@ -779,7 +779,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
       padding: const EdgeInsets.all(18),
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: Colors.red,
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -827,7 +827,7 @@ class _ListeningTestPageState extends State<ListeningTestPage> {
                   ? "Test Running"
                   : "Start Full Listening Test"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: const Color.fromARGB(255, 11, 11, 11),
                 foregroundColor: Colors.white,
                 disabledBackgroundColor: Colors.grey,
               ),

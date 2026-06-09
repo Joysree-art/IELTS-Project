@@ -271,7 +271,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
+                  color: Colors.red,
                   borderRadius: BorderRadius.circular(18),
                 ),
                 child: isChecking
@@ -281,7 +281,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                             CircularProgressIndicator(color: Colors.white),
                             SizedBox(height: 12),
                             Text(
-                              'Gemini is checking your writing...',
+                              'Groq is checking your writing...',
                               style: TextStyle(color: Colors.white),
                             ),
                           ],
@@ -307,7 +307,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
                               Row(
                                 children: [
                                   _StatBox(
-                                    title: 'Band',
+                                    title: 'Estimated Band',
                                     value:
                                         feedbackData!['band_score'].toString(),
                                   ),

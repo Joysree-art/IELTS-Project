@@ -1,3 +1,3 @@
 class AppSecrets {
-  static const String geminiApiKey = "";
+  static const String groqApiKey = "";
 }

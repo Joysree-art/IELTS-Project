@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import '../secrets.dart';
 
 class GroqService {
-  static const String _model = 'llama-3.1-8b-instant';
+  static const String _model = 'llama-3.3-70b-versatile';
 
   static Uri get _url => Uri.parse(
         'https://api.groq.com/openai/v1/chat/completions',
@@ -21,7 +21,7 @@ class GroqService {
         'messages': [
           {'role': 'user', 'content': prompt}
         ],
-        'temperature': 0.2,
+        'temperature': 0.1,
         'response_format': {'type': 'json_object'},
       }),
     );
@@ -69,19 +69,24 @@ class GroqService {
     return data['choices'][0]['message']['content'];
   }
 
-  static Future<Map<String, dynamic>> checkWriting({
-    required String module,
-    required String question,
-    required String answer,
-    String imageUrl = '',
-    String chartType = '',
-  }) async {
-    final prompt = '''
-You are an IELTS examiner.
+ static Future<Map<String, dynamic>> checkWriting({
+  required String module,
+  required String question,
+  required String answer,
+  String imageUrl = '',
+  String chartType = '',
+}) async {
+  final wordCount = answer.trim().split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+
+  final prompt = '''
+You are a strict certified IELTS Writing examiner.
+
+Evaluate this IELTS Writing answer using official IELTS band descriptors.
 
 Module: $module
 Chart Type: $chartType
 Image URL: $imageUrl
+Word Count: $wordCount
 
 Question:
 $question
@@ -89,15 +94,41 @@ $question
 Student Answer:
 $answer
 
-Evaluate the writing and return ONLY valid JSON.
+Important rules:
+- Do NOT be generous.
+- Do NOT give a fixed/default score.
+- Do NOT assume the answer is good.
+- Penalize if the answer is too short.
+- Penalize memorized or generic answers.
+- Judge only based on IELTS criteria.
+- Give separate scores for each criterion.
+- Overall band must be the average of the criteria rounded to nearest 0.5.
+
+For Task 1 criteria:
+1. Task Achievement
+2. Coherence and Cohesion
+3. Lexical Resource
+4. Grammatical Range and Accuracy
+
+For Task 2 criteria:
+1. Task Response
+2. Coherence and Cohesion
+3. Lexical Resource
+4. Grammatical Range and Accuracy
+
+Return ONLY valid JSON.
 Do not use markdown.
-Do not wrap the JSON in ```json.
-Do not add any explanation outside JSON.
+Do not wrap JSON in ```json.
+Do not add explanation outside JSON.
 
 Use exactly this JSON structure:
 
 {
-  "band_score": "6.5",
+  "task_score": 0,
+  "coherence_score": 0,
+  "vocabulary_score": 0,
+  "grammar_score": 0,
+  "band_score": 0,
   "overall_feedback": "",
   "grammar_feedback": "",
   "vocabulary_feedback": "",
@@ -106,31 +137,49 @@ Use exactly this JSON structure:
 }
 ''';
 
-    final cleanText = await _sendPrompt(prompt);
+  final cleanText = await _sendPrompt(prompt);
 
-    try {
-      final decoded = jsonDecode(
-        cleanText.replaceAll('```json', '').replaceAll('```', '').trim(),
-      );
+  try {
+    final decoded = jsonDecode(
+      cleanText.replaceAll('```json', '').replaceAll('```', '').trim(),
+    );
 
-      return {
-        'band_score': decoded['band_score']?.toString() ?? '0.0',
-        'overall_feedback':
-            decoded['overall_feedback']?.toString() ?? 'No overall feedback.',
-        'grammar_feedback':
-            decoded['grammar_feedback']?.toString() ?? 'No grammar feedback.',
-        'vocabulary_feedback': decoded['vocabulary_feedback']?.toString() ??
-            'No vocabulary feedback.',
-        'coherence_feedback': decoded['coherence_feedback']?.toString() ??
-            'No coherence feedback.',
-        'improvement_tips': decoded['improvement_tips'] is List
-            ? decoded['improvement_tips']
-            : <String>[],
-      };
-    } catch (e) {
-      throw Exception('Failed to parse Groq writing JSON: $cleanText');
+    double toDouble(dynamic value) {
+      if (value == null) return 0.0;
+      return double.tryParse(value.toString()) ?? 0.0;
     }
+
+    double roundToHalf(double value) {
+      return (value * 2).round() / 2;
+    }
+
+    final taskScore = toDouble(decoded['task_score']);
+    final coherenceScore = toDouble(decoded['coherence_score']);
+    final vocabularyScore = toDouble(decoded['vocabulary_score']);
+    final grammarScore = toDouble(decoded['grammar_score']);
+
+    final calculatedBand = roundToHalf(
+      (taskScore + coherenceScore + vocabularyScore + grammarScore) / 4,
+    );
+
+    return {
+      'band_score': calculatedBand.toStringAsFixed(1),
+      'overall_feedback':
+          decoded['overall_feedback']?.toString() ?? 'No overall feedback.',
+      'grammar_feedback':
+          decoded['grammar_feedback']?.toString() ?? 'No grammar feedback.',
+      'vocabulary_feedback':
+          decoded['vocabulary_feedback']?.toString() ?? 'No vocabulary feedback.',
+      'coherence_feedback':
+          decoded['coherence_feedback']?.toString() ?? 'No coherence feedback.',
+      'improvement_tips': decoded['improvement_tips'] is List
+          ? decoded['improvement_tips']
+          : <String>[],
+    };
+  } catch (e) {
+    throw Exception('Failed to parse Groq writing JSON: $cleanText');
   }
+}
 
   static Future<Map<String, dynamic>> checkSpeaking({
     required String part,

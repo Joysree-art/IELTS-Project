@@ -130,7 +130,7 @@ class _WritingTestPageState extends State<WritingTestPage> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF111827),
+                color: const Color(0xFFB71C1C),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Row(
@@ -460,8 +460,11 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
           double.tryParse(task2Feedback['band_score'].toString()) ?? 0.0;
 
       // IELTS Writing Task 2 has double weight.
-      final overall =
-          double.parse(((t1Band + (t2Band * 2)) / 3).toStringAsFixed(1));
+      // IELTS Writing Task 2 has double weight.
+final rawOverall = (t1Band + (t2Band * 2)) / 3;
+
+// Round to nearest IELTS band (0.5 steps)
+final overall = (rawOverall * 2).round() / 2;
 
       await supabase.from('writing_test_results').insert({
         'user_id': userId,
@@ -567,7 +570,7 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF111827),
+               color: const Color(0xFFB71C1C),
                 borderRadius: BorderRadius.circular(18),
               ),
               child: Row(
@@ -575,19 +578,19 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
                   _StatPill(
                     label: 'Task 1',
                     value: '$t1Words words',
-                    color: t1Words >= 150 ? Colors.green : Colors.orange,
+                    color: t1Words >= 150 ? Colors.green : const Color.fromARGB(255, 244, 242, 240),
                   ),
                   const SizedBox(width: 10),
                   _StatPill(
                     label: 'Task 2',
                     value: '$t2Words words',
-                    color: t2Words >= 250 ? Colors.green : Colors.orange,
+                    color: t2Words >= 250 ? Colors.green : const Color.fromARGB(255, 244, 242, 240),
                   ),
                   const SizedBox(width: 10),
                   _StatPill(
                     label: 'Spent',
                     value: _formatTime(secondsSpent),
-                    color: Colors.blue,
+                    color: const Color.fromARGB(255, 249, 250, 251),
                   ),
                 ],
               ),
@@ -942,9 +945,9 @@ class _ResultCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937),
+        color: const Color.fromARGB(255, 232, 101, 75),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(color: Colors.red),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -952,7 +955,7 @@ class _ResultCard extends StatelessWidget {
           Text(
             '$title Feedback • Band ${band.toStringAsFixed(1)}',
             style: const TextStyle(
-              color: Color(0xFF38BDF8),
+              color: const Color(0xFFFFCDD2),
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -987,7 +990,7 @@ class _ResultCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
-          color: const Color(0xFF111827),
+          color:  Colors.red,
           borderRadius: BorderRadius.circular(22),
         ),
         child: const Column(
@@ -995,7 +998,7 @@ class _ResultCard extends StatelessWidget {
             CircularProgressIndicator(color: Colors.white),
             SizedBox(height: 14),
             Text(
-              'Gemini is checking your full writing test...',
+              'Groq is checking your full writing test...',
               style: TextStyle(color: Colors.white),
             ),
           ],
@@ -1007,7 +1010,7 @@ class _ResultCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
+        color: const Color(0xFFB71C1C),
         borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
@@ -1025,7 +1028,7 @@ class _ResultCard extends StatelessWidget {
           Row(
             children: [
               _SummaryBox(
-                title: 'Overall Band',
+                title: 'Overall Estimated Band',
                 value: overallBandScore.toStringAsFixed(1),
               ),
               const SizedBox(width: 10),
@@ -1137,7 +1140,7 @@ class _StatPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1F2937),
+          color: const Color.fromARGB(255, 232, 101, 75),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -1154,7 +1157,7 @@ class _StatPill extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white54,
+                color: Color.fromARGB(135, 255, 255, 255),
                 fontSize: 11,
               ),
             ),
@@ -1180,7 +1183,7 @@ class _SummaryBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
         decoration: BoxDecoration(
-          color: const Color(0xFF1F2937),
+          color:const Color.fromARGB(255, 232, 101, 75),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -1189,7 +1192,7 @@ class _SummaryBox extends StatelessWidget {
               value,
               textAlign: TextAlign.center,
               style: const TextStyle(
-                color: Color(0xFF38BDF8),
+                color: Color.fromARGB(255, 236, 238, 239),
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
