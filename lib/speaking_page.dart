@@ -9,7 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_page.dart';
 import 'analytics_page.dart';
 import 'profile_page.dart';
-import 'services/gemini_service.dart';
+import 'services/groq_service.dart';
 
 class SpeakingPage extends StatefulWidget {
   const SpeakingPage({super.key});
@@ -257,7 +257,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
     }
 
     try {
-      final result = await GeminiService.checkSpeaking(
+      final result = await GroqService.checkSpeaking(
         part: _selectedPart,
         topic: _topic,
         cuePoints: _cuePoints,
@@ -316,13 +316,13 @@ class _SpeakingPageState extends State<SpeakingPage> {
       });
 
       await supabase.from('homepage_scores').insert({
-      'user_id': user?.id,
-     'module': 'speaking',
-     'band_score': _bandScore,
-     'test_type': 'part_test',
-     'part': _selectedPart,
-     'created_at': DateTime.now().toIso8601String(),
-     });
+        'user_id': user?.id,
+        'module': 'speaking',
+        'band_score': _bandScore,
+        'test_type': 'part_test',
+        'part': _selectedPart,
+        'created_at': DateTime.now().toIso8601String(),
+      });
 
       _showMessage("Speaking result saved");
       await _fetchHistory();

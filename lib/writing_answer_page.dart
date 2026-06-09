@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'services/gemini_service.dart';
+import 'services/groq_service.dart';
 
 class WritingAnswerPage extends StatefulWidget {
   final String title;
@@ -83,7 +83,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
     });
 
     try {
-      final parsedFeedback = await GeminiService.checkWriting(
+      final parsedFeedback = await GroqService.checkWriting(
         module: taskType == 'task1' ? 'writing_task_1' : 'writing_task_2',
         question: widget.question,
         answer: answer,

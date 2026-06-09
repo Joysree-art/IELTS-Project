@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'models/writing_question.dart';
-import 'services/gemini_service.dart';
+import 'services/groq_service.dart';
 
 // ─── Entry: Type Selection Screen ────────────────────────────────────────────
 
@@ -40,7 +40,10 @@ class _WritingTestPageState extends State<WritingTestPage> {
     {'value': 'opinion', 'label': 'Opinion Essay'},
     {'value': 'discussion', 'label': 'Discussion'},
     {'value': 'problem-solution', 'label': 'Problem & Solution'},
-    {'value': 'advantages-disadvantages', 'label': 'Advantages & Disadvantages'},
+    {
+      'value': 'advantages-disadvantages',
+      'label': 'Advantages & Disadvantages'
+    },
     {'value': 'two-part', 'label': 'Two-Part Question'},
     {'value': 'other', 'label': 'Other'},
   ];
@@ -160,16 +163,13 @@ class _WritingTestPageState extends State<WritingTestPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 28),
-
             _SectionLabel(
               number: '1',
               title: 'Select Task 1 Type',
               subtitle: 'A random question of this type will be selected',
             ),
             const SizedBox(height: 14),
-
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -227,16 +227,13 @@ class _WritingTestPageState extends State<WritingTestPage> {
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 28),
-
             _SectionLabel(
               number: '2',
               title: 'Select Task 2 Type',
               subtitle: 'A random question of this type will be selected',
             ),
             const SizedBox(height: 14),
-
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -283,9 +280,7 @@ class _WritingTestPageState extends State<WritingTestPage> {
                 );
               }).toList(),
             ),
-
             const SizedBox(height: 36),
-
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -318,9 +313,7 @@ class _WritingTestPageState extends State<WritingTestPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
             const Center(
               child: Text(
                 'Questions are fetched randomly from the question bank.',
@@ -444,7 +437,7 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
     try {
       final userId = supabase.auth.currentUser?.id;
 
-      final task1Feedback = await GeminiService.checkWriting(
+      final task1Feedback = await GroqService.checkWriting(
         module: 'writing_task_1',
         question: widget.task1Question.questionText,
         answer: task1Answer,
@@ -452,7 +445,7 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
         chartType: widget.task1Question.questionType,
       );
 
-      final task2Feedback = await GeminiService.checkWriting(
+      final task2Feedback = await GroqService.checkWriting(
         module: 'writing_task_2',
         question: widget.task2Question.questionText,
         answer: task2Answer,
@@ -599,9 +592,7 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 22),
-
             _TaskBox(
               taskLabel: 'Task 1',
               question: widget.task1Question,
@@ -611,9 +602,7 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
               minWords: 150,
               onChanged: () => setState(() {}),
             ),
-
             const SizedBox(height: 22),
-
             _TaskBox(
               taskLabel: 'Task 2',
               question: widget.task2Question,
@@ -623,9 +612,7 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
               minWords: 250,
               onChanged: () => setState(() {}),
             ),
-
             const SizedBox(height: 26),
-
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -650,7 +637,6 @@ class _WritingTestExamPageState extends State<_WritingTestExamPage> {
                       ),
               ),
             ),
-
             if (submitted) ...[
               const SizedBox(height: 22),
               _ResultCard(
@@ -742,7 +728,8 @@ class _TaskBox extends StatelessWidget {
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
-                  color: meetsMin ? Colors.green.shade50 : Colors.orange.shade50,
+                  color:
+                      meetsMin ? Colors.green.shade50 : Colors.orange.shade50,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: meetsMin ? Colors.green : Colors.orange,
@@ -760,9 +747,7 @@ class _TaskBox extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 14),
-
           if (question.imageUrl.isNotEmpty) ...[
             Container(
               width: double.infinity,
@@ -802,7 +787,6 @@ class _TaskBox extends StatelessWidget {
             ),
             const SizedBox(height: 14),
           ],
-
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -816,18 +800,15 @@ class _TaskBox extends StatelessWidget {
               style: const TextStyle(fontSize: 15, height: 1.6),
             ),
           ),
-
           const SizedBox(height: 14),
-
           TextField(
             controller: controller,
             enabled: canType,
             maxLines: 12,
             onChanged: (_) => onChanged(),
             decoration: InputDecoration(
-              hintText: canType
-                  ? 'Write your answer here...'
-                  : 'Submission closed.',
+              hintText:
+                  canType ? 'Write your answer here...' : 'Submission closed.',
               filled: true,
               fillColor: canType ? Colors.white : Colors.grey.shade50,
               border: OutlineInputBorder(
@@ -1040,9 +1021,7 @@ class _ResultCard extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-
           const SizedBox(height: 16),
-
           Row(
             children: [
               _SummaryBox(
@@ -1061,9 +1040,7 @@ class _ResultCard extends StatelessWidget {
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           Row(
             children: [
               _SummaryBox(title: 'Task 1 Words', value: '$t1Words'),
@@ -1073,13 +1050,11 @@ class _ResultCard extends StatelessWidget {
               _SummaryBox(title: 'Time', value: _formatTime(timeSpent)),
             ],
           ),
-
           _taskFeedbackSection(
             title: 'Task 1',
             band: task1Band,
             feedback: task1Feedback,
           ),
-
           _taskFeedbackSection(
             title: 'Task 2',
             band: task2Band,

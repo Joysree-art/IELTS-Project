@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/gemini_service.dart';
+import '../services/groq_service.dart';
 
 class AdminReadingPage extends StatefulWidget {
   const AdminReadingPage({super.key});
@@ -144,7 +144,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     setState(() => isLoading = true);
 
     try {
-      final result = await GeminiService.generateReadingQuestions(
+      final result = await GroqService.generateReadingQuestions(
         passageText: passageController.text.trim(),
       );
 
