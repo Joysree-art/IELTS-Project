@@ -334,20 +334,35 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       return;
     }
 
+    if (titleController.text.trim().isEmpty ||
+        passageController.text.trim().isEmpty) {
+      _msg('Title and passage required');
+      return;
+    }
+
     setState(() => isLoading = true);
 
     try {
-      await supabase.from('reading_passages').update({
-        'title': titleController.text.trim(),
-        'passage_text': passageController.text.trim(),
-        'difficulty': difficulty,
-        'source': sourceController.text.trim(),
-      }).eq('id', savedPassageId!);
+      final updated = await supabase
+          .from('reading_passages')
+          .update({
+            'title': titleController.text.trim(),
+            'passage_text': passageController.text.trim(),
+            'difficulty': difficulty,
+            'source': sourceController.text.trim(),
+          })
+          .eq('id', savedPassageId!)
+          .select();
+
+      if (updated.isEmpty) {
+        _msg('Passage update failed. Check Supabase update policy.');
+        return;
+      }
 
       await _fetchSavedPassages();
-      _msg('Passage updated');
+      _msg('Passage updated successfully');
     } catch (e) {
-      _msg('Update failed: $e');
+      _msg('Passage update failed: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -358,12 +373,29 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
 
     final data = await supabase
         .from('reading_questions')
-        .select()
+        .select('''
+        *,
+        reading_options(*)
+      ''')
         .eq('passage_id', savedPassageId!)
         .order('question_order', ascending: true);
 
+    final questions = List<Map<String, dynamic>>.from(data);
+
+    for (final q in questions) {
+      final options = q['reading_options'];
+
+      if (options is List) {
+        options.sort((a, b) {
+          final ao = a['option_order'] ?? 0;
+          final bo = b['option_order'] ?? 0;
+          return ao.compareTo(bo);
+        });
+      }
+    }
+
     setState(() {
-      savedQuestions = List<Map<String, dynamic>>.from(data);
+      savedQuestions = questions;
     });
   }
 
@@ -589,45 +621,196 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
   }
 
   void _showEditQuestionDialog(Map<String, dynamic> q) {
-    questionController.text = q['question_text']?.toString() ?? '';
-    answerController.text = q['correct_answer']?.toString() ?? '';
-    explanationController.text = q['explanation']?.toString() ?? '';
-    questionType = q['question_type']?.toString() ?? 'MCQ';
+    final editQuestionController = TextEditingController(
+      text: q['question_text']?.toString() ?? '',
+    );
+    final editAnswerController = TextEditingController(
+      text: q['correct_answer']?.toString() ?? '',
+    );
+    final editExplanationController = TextEditingController(
+      text: q['explanation']?.toString() ?? '',
+    );
+
+    String editQuestionType = q['question_type']?.toString() ?? 'MCQ';
+
+    final options = q['reading_options'] is List
+        ? List<Map<String, dynamic>>.from(q['reading_options'])
+        : <Map<String, dynamic>>[];
+
+    final editOption1Controller = TextEditingController(
+      text:
+          options.isNotEmpty ? options[0]['option_text']?.toString() ?? '' : '',
+    );
+    final editOption2Controller = TextEditingController(
+      text:
+          options.length > 1 ? options[1]['option_text']?.toString() ?? '' : '',
+    );
+    final editOption3Controller = TextEditingController(
+      text:
+          options.length > 2 ? options[2]['option_text']?.toString() ?? '' : '',
+    );
+    final editOption4Controller = TextEditingController(
+      text:
+          options.length > 3 ? options[3]['option_text']?.toString() ?? '' : '',
+    );
 
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Edit Question'),
-        content: SingleChildScrollView(
-          child: Column(
-            children: [
-              _field(questionController, 'Question Text', maxLines: 3),
-              _field(answerController, 'Correct Answer'),
-              _field(explanationController, 'Explanation', maxLines: 2),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await supabase.from('reading_questions').update({
-                'question_text': questionController.text.trim(),
-                'correct_answer': answerController.text.trim(),
-                'explanation': explanationController.text.trim(),
-              }).eq('id', q['id']);
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final showEditOptions = _hasOptions(editQuestionType);
 
-              Navigator.pop(ctx);
-              await _fetchSavedQuestions();
-              _msg('Question updated');
-            },
-            child: const Text('Update'),
-          ),
-        ],
-      ),
+            return AlertDialog(
+              title: const Text('Edit Question'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _field(editQuestionController, 'Question Text',
+                        maxLines: 3),
+                    DropdownButtonFormField<String>(
+                      value: editQuestionType,
+                      decoration: const InputDecoration(
+                        labelText: 'Question Type',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: questionTypes
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setDialogState(() {
+                            editQuestionType = v;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (editQuestionType == 'true_false_not_given')
+                      DropdownButtonFormField<String>(
+                        value: editAnswerController.text.isEmpty
+                            ? null
+                            : editAnswerController.text,
+                        decoration: const InputDecoration(
+                          labelText: 'Correct Answer',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'True', child: Text('True')),
+                          DropdownMenuItem(
+                              value: 'False', child: Text('False')),
+                          DropdownMenuItem(
+                            value: 'Not Given',
+                            child: Text('Not Given'),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            editAnswerController.text = v;
+                          }
+                        },
+                      )
+                    else
+                      _field(editAnswerController, 'Correct Answer'),
+                    const SizedBox(height: 12),
+                    _field(editExplanationController, 'Explanation',
+                        maxLines: 2),
+                    if (showEditOptions) ...[
+                      _field(editOption1Controller, 'Option 1'),
+                      _field(editOption2Controller, 'Option 2'),
+                      _field(editOption3Controller, 'Option 3'),
+                      _field(editOption4Controller, 'Option 4'),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      final cleanOptions = showEditOptions
+                          ? [
+                              editOption1Controller.text.trim(),
+                              editOption2Controller.text.trim(),
+                              editOption3Controller.text.trim(),
+                              editOption4Controller.text.trim(),
+                            ].where((e) => e.isNotEmpty).toList()
+                          : <String>[];
+
+                      if (editQuestionController.text.trim().isEmpty ||
+                          editAnswerController.text.trim().isEmpty) {
+                        _msg('Question and answer required');
+                        return;
+                      }
+
+                      if (showEditOptions && cleanOptions.length < 2) {
+                        _msg('This question type needs at least 2 options');
+                        return;
+                      }
+
+                      final updated = await supabase
+                          .from('reading_questions')
+                          .update({
+                            'question_text': editQuestionController.text.trim(),
+                            'question_type': _normalType(editQuestionType),
+                            'correct_answer': editAnswerController.text.trim(),
+                            'explanation':
+                                editExplanationController.text.trim(),
+                          })
+                          .eq('id', q['id'])
+                          .select();
+
+                      if (updated.isEmpty) {
+                        _msg('Question update failed. Check update policy.');
+                        return;
+                      }
+
+                      await supabase
+                          .from('reading_options')
+                          .delete()
+                          .eq('question_id', q['id']);
+
+                      if (showEditOptions && cleanOptions.isNotEmpty) {
+                        await supabase.from('reading_options').insert(
+                              List.generate(cleanOptions.length, (index) {
+                                return {
+                                  'question_id': q['id'],
+                                  'option_text': cleanOptions[index],
+                                  'option_order': index + 1,
+                                };
+                              }),
+                            );
+                      }
+
+                      if (ctx.mounted) Navigator.pop(ctx);
+
+                      await _fetchSavedQuestions();
+                      _msg('Question updated successfully');
+                    } catch (e) {
+                      _msg('Question update failed: $e');
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -758,33 +941,22 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: isLoading ? null : _savePassage,
-                    icon: const Icon(Icons.save),
+                    onPressed: isLoading
+                        ? null
+                        : savedPassageId == null
+                            ? _savePassage
+                            : _updatePassage,
+                    icon: Icon(
+                        savedPassageId == null ? Icons.save : Icons.update),
                     label: Text(savedPassageId == null
                         ? 'Save Passage'
-                        : 'Passage Saved'),
+                        : 'Update Passage'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFDB2777),
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
-                if (isEditMode) ...[
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: isLoading ? null : _updatePassage,
-                      icon: const Icon(Icons.update),
-                      label: const Text('Update Passage'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
                 _title('2. Generate Questions with AI'),
                 Row(
                   children: [
