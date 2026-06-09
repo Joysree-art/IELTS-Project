@@ -39,7 +39,6 @@ class _ReadingPageState extends State<ReadingPage> {
   List<String?> selectedAnswers = [];
 
   final Set<int> bookmarkedQuestions = {};
-  final TextEditingController noteController = TextEditingController();
 
   Timer? countdownTimer;
   Duration duration = const Duration(minutes: 60);
@@ -254,14 +253,14 @@ class _ReadingPageState extends State<ReadingPage> {
       });
 
       if (currentPracticeType == 'mixed') {
-      await supabase.from('homepage_scores').insert({
-      'user_id': userId,
-      'module': 'reading',
-      'band_score': bandScore,
-      'test_type': 'full_test',
-      'created_at': DateTime.now().toIso8601String(),
-     });
-}
+        await supabase.from('homepage_scores').insert({
+          'user_id': userId,
+          'module': 'reading',
+          'band_score': bandScore,
+          'test_type': 'full_test',
+          'created_at': DateTime.now().toIso8601String(),
+        });
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -280,7 +279,7 @@ class _ReadingPageState extends State<ReadingPage> {
   @override
   void dispose() {
     countdownTimer?.cancel();
-    noteController.dispose();
+
     super.dispose();
   }
 
@@ -634,32 +633,17 @@ class _ReadingPageState extends State<ReadingPage> {
             style: const TextStyle(color: Colors.white70, height: 1.5),
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _showFullPassage,
-                  icon: const Icon(Icons.visibility),
-                  label: const Text('View Passage'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1F2937),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _showFullPassage,
+              icon: const Icon(Icons.visibility),
+              label: const Text('View Passage'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1F2937),
+                foregroundColor: Colors.white,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: _showNoteDialog,
-                  icon: const Icon(Icons.note_alt_outlined),
-                  label: const Text('Take Notes'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1F2937),
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -702,46 +686,6 @@ class _ReadingPageState extends State<ReadingPage> {
               ),
             );
           },
-        );
-      },
-    );
-  }
-
-  void _showNoteDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Take Notes'),
-          content: TextField(
-            controller: noteController,
-            maxLines: 8,
-            decoration: InputDecoration(
-              hintText: 'Write your notes here...',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Notes saved successfully')),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDB2777),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Save'),
-            ),
-          ],
         );
       },
     );
