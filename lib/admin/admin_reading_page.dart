@@ -32,6 +32,8 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
   String? savedPassageId;
   List<Map<String, dynamic>> generatedQuestions = [];
   List<Map<String, dynamic>> savedQuestions = [];
+  List<Map<String, dynamic>> savedPassages = [];
+  bool isEditMode = false;
 
   final questionTypes = const [
     'MCQ',
@@ -41,6 +43,11 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     'matching_information',
     'short_answer',
   ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchSavedPassages();
+  }
 
   @override
   void dispose() {
@@ -90,7 +97,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     setState(() => isLoading = true);
 
     try {
-      // ===== GET NEXT PASSAGE NUMBER =====
       final lastPassage = await supabase
           .from('reading_passages')
           .select('passage_number')
@@ -101,7 +107,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
           ? 1
           : (lastPassage[0]['passage_number'] as int) + 1;
 
-      // ===== INSERT PASSAGE =====
       final inserted = await supabase
           .from('reading_passages')
           .insert({
@@ -299,6 +304,55 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     }
   }
 
+  Future<void> _fetchSavedPassages() async {
+    final data = await supabase
+        .from('reading_passages')
+        .select()
+        .order('created_at', ascending: false);
+
+    setState(() {
+      savedPassages = List<Map<String, dynamic>>.from(data);
+    });
+  }
+
+  Future<void> _openSavedPassage(Map<String, dynamic> passage) async {
+    setState(() {
+      savedPassageId = passage['id'].toString();
+      titleController.text = passage['title']?.toString() ?? '';
+      passageController.text = passage['passage_text']?.toString() ?? '';
+      sourceController.text = passage['source']?.toString() ?? 'Admin / AI';
+      difficulty = passage['difficulty']?.toString() ?? 'medium';
+      isEditMode = true;
+    });
+
+    await _fetchSavedQuestions();
+  }
+
+  Future<void> _updatePassage() async {
+    if (savedPassageId == null) {
+      _msg('Open a saved passage first');
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await supabase.from('reading_passages').update({
+        'title': titleController.text.trim(),
+        'passage_text': passageController.text.trim(),
+        'difficulty': difficulty,
+        'source': sourceController.text.trim(),
+      }).eq('id', savedPassageId!);
+
+      await _fetchSavedPassages();
+      _msg('Passage updated');
+    } catch (e) {
+      _msg('Update failed: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
   Future<void> _fetchSavedQuestions() async {
     if (savedPassageId == null) return;
 
@@ -344,6 +398,75 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       _msg('Question deleted');
     } catch (e) {
       _msg('Delete failed: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _deletePassage(String passageId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Passage'),
+        content: const Text(
+            'This will delete the passage and all its questions. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      final questions = await supabase
+          .from('reading_questions')
+          .select('id')
+          .eq('passage_id', passageId);
+
+      for (final q in questions) {
+        await supabase
+            .from('reading_options')
+            .delete()
+            .eq('question_id', q['id']);
+      }
+
+      await supabase
+          .from('reading_questions')
+          .delete()
+          .eq('passage_id', passageId);
+      await supabase.from('reading_passages').delete().eq('id', passageId);
+      if (savedPassageId == passageId) {
+        titleController.clear();
+        passageController.clear();
+        sourceController.text = 'Admin / AI';
+        savedPassageId = null;
+        savedQuestions.clear();
+        isEditMode = false;
+      }
+
+      final updatedPassages = await supabase
+          .from('reading_passages')
+          .select()
+          .order('created_at', ascending: false);
+
+      setState(() {
+        savedPassages = List<Map<String, dynamic>>.from(updatedPassages);
+      });
+
+      _msg('Passage deleted');
+    } catch (e) {
+      _msg('Passage delete failed: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -429,6 +552,85 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     );
   }
 
+  Widget _savedPassagesList() {
+    if (savedPassages.isEmpty) {
+      return const Text(
+        'No saved passages yet.',
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+
+    return Column(
+      children: savedPassages.map((p) {
+        return Card(
+          child: ListTile(
+            title: Text(p['title']?.toString() ?? ''),
+            subtitle: Text('Difficulty: ${p['difficulty'] ?? ''}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () => _deletePassage(
+                    p['id'].toString(),
+                  ),
+                ),
+                const Icon(Icons.open_in_new),
+              ],
+            ),
+            onTap: () => _openSavedPassage(p),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _showEditQuestionDialog(Map<String, dynamic> q) {
+    questionController.text = q['question_text']?.toString() ?? '';
+    answerController.text = q['correct_answer']?.toString() ?? '';
+    explanationController.text = q['explanation']?.toString() ?? '';
+    questionType = q['question_type']?.toString() ?? 'MCQ';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Question'),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              _field(questionController, 'Question Text', maxLines: 3),
+              _field(answerController, 'Correct Answer'),
+              _field(explanationController, 'Explanation', maxLines: 2),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await supabase.from('reading_questions').update({
+                'question_text': questionController.text.trim(),
+                'correct_answer': answerController.text.trim(),
+                'explanation': explanationController.text.trim(),
+              }).eq('id', q['id']);
+
+              Navigator.pop(ctx);
+              await _fetchSavedQuestions();
+              _msg('Question updated');
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _savedList() {
     if (savedQuestions.isEmpty) {
       return const Text(
@@ -445,9 +647,26 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
             subtitle: Text(
               'Type: ${q['question_type']} | Answer: ${q['correct_answer']}',
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => _deleteQuestion(q['id'].toString()),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.edit,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () => _showEditQuestionDialog(q),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () => _deleteQuestion(
+                    q['id'].toString(),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -511,6 +730,8 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _title('Saved Passages'),
+                _savedPassagesList(),
                 _title('1. Passage'),
                 _field(titleController, 'Passage Title'),
                 _field(passageController, 'Passage Text', maxLines: 9),
@@ -548,6 +769,22 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                     ),
                   ),
                 ),
+                if (isEditMode) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton.icon(
+                      onPressed: isLoading ? null : _updatePassage,
+                      icon: const Icon(Icons.update),
+                      label: const Text('Update Passage'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
                 _title('2. Generate Questions with AI'),
                 Row(
                   children: [
