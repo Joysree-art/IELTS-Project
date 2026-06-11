@@ -1095,16 +1095,26 @@ class _ReadingPageState extends State<ReadingPage> {
   }
 
   String _aiInsight(int percentage) {
-    if (percentage >= 85) {
-      return 'Excellent work! Practice harder IELTS passages and focus on time management.';
+    if (percentage >= 90) {
+      return 'Outstanding performance. You are performing at a very high IELTS Reading level. Continue practicing difficult passages and focus on maintaining speed and accuracy.';
+    } else if (percentage >= 80) {
+      return 'Excellent work. Your reading skills are strong. Continue improving inference and complex detail questions.';
     } else if (percentage >= 70) {
-      return 'Good performance. Review detail-based and inference questions.';
-    } else if (percentage >= 55) {
-      return 'Average performance. Focus on keywords, scanning, and paragraph meaning.';
+      return 'Good performance. Review detail-based and inference questions to reach a higher band score.';
+    } else if (percentage >= 60) {
+      return 'Average performance. Focus on scanning, skimming, and understanding paragraph structure.';
+    } else if (percentage >= 50) {
+      return 'Fair performance. Work on identifying keywords and avoiding careless mistakes.';
     } else if (percentage >= 40) {
-      return 'You need more practice. Underline keywords and avoid guessing too quickly.';
+      return 'You need more practice. Improve vocabulary and spend more time understanding passage meaning.';
+    } else if (percentage >= 30) {
+      return 'Reading skills are developing. Practice short passages regularly and focus on finding answers quickly.';
+    } else if (percentage >= 20) {
+      return 'Significant improvement is needed. Build vocabulary, practice basic reading comprehension, and learn common IELTS question types.';
+    } else if (percentage >= 10) {
+      return 'Very limited understanding. Start with easier reading materials and gradually increase difficulty.';
     } else {
-      return 'Basic understanding needs improvement. Start with short passages and vocabulary practice.';
+      return 'Reading foundation needs major improvement. Focus on basic English reading skills, vocabulary building, and sentence comprehension.';
     }
   }
 
