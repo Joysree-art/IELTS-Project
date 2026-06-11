@@ -477,7 +477,17 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
           .from('reading_questions')
           .delete()
           .eq('passage_id', passageId);
-      await supabase.from('reading_passages').delete().eq('id', passageId);
+
+      final remainingPassages = await supabase
+          .from('reading_passages')
+          .select('id')
+          .order('passage_number', ascending: true);
+
+      for (int i = 0; i < remainingPassages.length; i++) {
+        await supabase.from('reading_passages').update({
+          'passage_number': i + 1,
+        }).eq('id', remainingPassages[i]['id']);
+      }
       if (savedPassageId == passageId) {
         titleController.clear();
         passageController.clear();

@@ -30,13 +30,44 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     setState(() => isLoading = true);
 
     try {
-      final data = await supabase
+      final speakingData = await supabase
           .from('speaking_results')
           .select()
           .order('created_at', ascending: false);
 
+      final readingData = await supabase
+          .from('reading_scores')
+          .select()
+          .order('created_at', ascending: false);
+
+      final speakingResults =
+          List<Map<String, dynamic>>.from(speakingData).map((e) {
+        return {
+          ...e,
+          'result_type': 'speaking',
+        };
+      }).toList();
+
+      final readingResults =
+          List<Map<String, dynamic>>.from(readingData).map((e) {
+        return {
+          ...e,
+          'result_type': 'reading',
+        };
+      }).toList();
+
+      final allResults = [...speakingResults, ...readingResults];
+
+      allResults.sort((a, b) {
+        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+            DateTime(2000);
+        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+            DateTime(2000);
+        return bDate.compareTo(aDate);
+      });
+
       setState(() {
-        results = List<Map<String, dynamic>>.from(data);
+        results = allResults;
       });
     } catch (e) {
       _showMessage("Failed to load results: $e");
@@ -61,12 +92,29 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
   }
 
   Widget _resultCard(Map<String, dynamic> item) {
-    final part = item['part']?.toString() ?? '';
-    final topic = item['topic']?.toString() ?? '';
-    final transcript = item['transcript']?.toString() ?? '';
-    final feedback = item['feedback']?.toString() ?? '';
-    final score = item['score']?.toString() ?? '-';
+    final resultType = item['result_type']?.toString() ?? '';
     final date = item['created_at']?.toString().split('T').first ?? '';
+
+    final title = resultType == 'reading'
+        ? 'Reading - ${item['practice_type'] ?? ''}'
+        : item['part']?.toString() ?? 'Speaking';
+
+    final topic = resultType == 'reading'
+        ? 'Score: ${item['correct_answers'] ?? 0} / ${item['total_questions'] ?? 0}'
+        : item['topic']?.toString() ?? '';
+
+    final transcript = resultType == 'reading'
+        ? 'Accuracy: ${item['percentage'] ?? 0}%'
+        : item['transcript']?.toString() ?? '';
+
+    final feedback = resultType == 'reading'
+        ? item['insight']?.toString() ??
+            'Band Score: ${item['band_score'] ?? '-'}'
+        : item['feedback']?.toString() ?? '';
+
+    final score = resultType == 'reading'
+        ? item['band_score']?.toString() ?? '-'
+        : item['score']?.toString() ?? '-';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -97,7 +145,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      part,
+                      title,
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -235,7 +283,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          "Speaking Results (${results.length})",
+                          "All Results (${results.length})",
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: primaryColor,

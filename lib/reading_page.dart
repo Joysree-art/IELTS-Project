@@ -221,11 +221,24 @@ class _ReadingPageState extends State<ReadingPage> {
   }
 
   double get bandScore {
-    if (percentage >= 85) return 8.0;
-    if (percentage >= 70) return 7.0;
-    if (percentage >= 55) return 6.0;
-    if (percentage >= 40) return 5.0;
-    return 4.5;
+    final correct = correctCount;
+
+    if (correct >= 39) return 9.0;
+    if (correct >= 37) return 8.5;
+    if (correct >= 35) return 8.0;
+    if (correct >= 33) return 7.5;
+    if (correct >= 30) return 7.0;
+    if (correct >= 27) return 6.5;
+    if (correct >= 23) return 6.0;
+    if (correct >= 19) return 5.5;
+    if (correct >= 15) return 5.0;
+    if (correct >= 13) return 4.5;
+    if (correct >= 10) return 4.0;
+    if (correct >= 8) return 3.5;
+    if (correct >= 6) return 3.0;
+    if (correct >= 4) return 2.5;
+
+    return 0.0;
   }
 
   Future<void> _saveReadingScoreToSupabase() async {
@@ -243,6 +256,7 @@ class _ReadingPageState extends State<ReadingPage> {
         'total_questions': questions.length,
         'percentage': percentage,
         'band_score': bandScore,
+        'insight': _aiInsight(percentage),
         'created_at': DateTime.now().toIso8601String(),
       });
       await supabase.from('ielts_scores').insert({
