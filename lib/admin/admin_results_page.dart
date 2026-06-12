@@ -12,8 +12,10 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
   final supabase = Supabase.instance.client;
 
   bool isLoading = true;
+
   List<Map<String, dynamic>> users = [];
-  List<Map<String, dynamic>> allResults = [];
+  List<Map<String, dynamic>> speakingResults = [];
+  List<Map<String, dynamic>> readingResults = [];
 
   static const bgColor = Color(0xFFF5F6FA);
   static const primaryColor = Color(0xFFFF3B30);
@@ -31,23 +33,23 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     setState(() => isLoading = true);
 
     try {
-<<<<<<< HEAD
-      final resultsData = await supabase
-=======
       final speakingData = await supabase
->>>>>>> origin/main
           .from('speaking_results')
           .select()
           .order('created_at', ascending: false);
 
-<<<<<<< HEAD
-      allResults = List<Map<String, dynamic>>.from(resultsData);
+      final readingData = await supabase
+          .from('reading_scores')
+          .select()
+          .order('created_at', ascending: false);
 
-      final userIds = allResults
-          .map((e) => e['user_id']?.toString())
-          .where((id) => id != null && id.isNotEmpty)
-          .toSet()
-          .toList();
+      speakingResults = List<Map<String, dynamic>>.from(speakingData);
+      readingResults = List<Map<String, dynamic>>.from(readingData);
+
+      final userIds = [
+        ...speakingResults.map((e) => e['user_id']?.toString()),
+        ...readingResults.map((e) => e['user_id']?.toString()),
+      ].where((id) => id != null && id.isNotEmpty).toSet().toList();
 
       if (userIds.isEmpty) {
         setState(() {
@@ -63,42 +65,6 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
           .inFilter('id', userIds);
 
       users = List<Map<String, dynamic>>.from(profilesData);
-=======
-      final readingData = await supabase
-          .from('reading_scores')
-          .select()
-          .order('created_at', ascending: false);
-
-      final speakingResults =
-          List<Map<String, dynamic>>.from(speakingData).map((e) {
-        return {
-          ...e,
-          'result_type': 'speaking',
-        };
-      }).toList();
-
-      final readingResults =
-          List<Map<String, dynamic>>.from(readingData).map((e) {
-        return {
-          ...e,
-          'result_type': 'reading',
-        };
-      }).toList();
-
-      final allResults = [...speakingResults, ...readingResults];
-
-      allResults.sort((a, b) {
-        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
-            DateTime(2000);
-        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
-            DateTime(2000);
-        return bDate.compareTo(aDate);
-      });
-
-      setState(() {
-        results = allResults;
-      });
->>>>>>> origin/main
     } catch (e) {
       _showMessage("Failed to load results: $e");
     }
@@ -106,31 +72,62 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     if (mounted) setState(() => isLoading = false);
   }
 
-  int _resultCountForUser(String userId) {
-    return allResults.where((r) => r['user_id'].toString() == userId).length;
+  int _speakingCountForUser(String userId) {
+    return speakingResults.where((r) => r['user_id'].toString() == userId).length;
   }
 
-  double _latestScoreForUser(String userId) {
-    final userResults =
-        allResults.where((r) => r['user_id'].toString() == userId).toList();
+  int _readingCountForUser(String userId) {
+    return readingResults.where((r) => r['user_id'].toString() == userId).length;
+  }
 
-    if (userResults.isEmpty) return 0.0;
+  String _latestScoreForUser(String userId) {
+    final userSpeaking = speakingResults
+        .where((r) => r['user_id'].toString() == userId)
+        .map((e) => {...e, 'type': 'speaking'})
+        .toList();
 
-    return double.tryParse(userResults.first['score'].toString()) ?? 0.0;
+    final userReading = readingResults
+        .where((r) => r['user_id'].toString() == userId)
+        .map((e) => {...e, 'type': 'reading'})
+        .toList();
+
+    final all = [...userSpeaking, ...userReading];
+
+    if (all.isEmpty) return "-";
+
+    all.sort((a, b) {
+      final aDate =
+          DateTime.tryParse(a['created_at']?.toString() ?? '') ?? DateTime(2000);
+      final bDate =
+          DateTime.tryParse(b['created_at']?.toString() ?? '') ?? DateTime(2000);
+      return bDate.compareTo(aDate);
+    });
+
+    final latest = all.first;
+
+    if (latest['type'] == 'reading') {
+      return latest['band_score']?.toString() ?? "-";
+    }
+
+    return latest['score']?.toString() ?? "-";
   }
 
   void _openUserDetails(Map<String, dynamic> user) {
     final userId = user['id'].toString();
 
-    final userResults =
-        allResults.where((r) => r['user_id'].toString() == userId).toList();
+    final userSpeakingResults =
+        speakingResults.where((r) => r['user_id'].toString() == userId).toList();
+
+    final userReadingResults =
+        readingResults.where((r) => r['user_id'].toString() == userId).toList();
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => AdminUserResultDetailsPage(
           user: user,
-          speakingResults: userResults,
+          speakingResults: userSpeakingResults,
+          readingResults: userReadingResults,
         ),
       ),
     );
@@ -151,42 +148,17 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     );
   }
 
-<<<<<<< HEAD
   Widget _userCard(Map<String, dynamic> user) {
     final userId = user['id'].toString();
     final name = user['full_name']?.toString().trim();
     final email = user['email']?.toString() ?? '';
     final avatarUrl = user['avatar_url']?.toString();
-    final count = _resultCountForUser(userId);
+
+    final speakingCount = _speakingCountForUser(userId);
+    final readingCount = _readingCountForUser(userId);
     final latestScore = _latestScoreForUser(userId);
 
     final hasAvatar = avatarUrl != null && avatarUrl.trim().isNotEmpty;
-=======
-  Widget _resultCard(Map<String, dynamic> item) {
-    final resultType = item['result_type']?.toString() ?? '';
-    final date = item['created_at']?.toString().split('T').first ?? '';
->>>>>>> origin/main
-
-    final title = resultType == 'reading'
-        ? 'Reading - ${item['practice_type'] ?? ''}'
-        : item['part']?.toString() ?? 'Speaking';
-
-    final topic = resultType == 'reading'
-        ? 'Score: ${item['correct_answers'] ?? 0} / ${item['total_questions'] ?? 0}'
-        : item['topic']?.toString() ?? '';
-
-    final transcript = resultType == 'reading'
-        ? 'Accuracy: ${item['percentage'] ?? 0}%'
-        : item['transcript']?.toString() ?? '';
-
-    final feedback = resultType == 'reading'
-        ? item['insight']?.toString() ??
-            'Band Score: ${item['band_score'] ?? '-'}'
-        : item['feedback']?.toString() ?? '';
-
-    final score = resultType == 'reading'
-        ? item['band_score']?.toString() ?? '-'
-        : item['score']?.toString() ?? '-';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -225,29 +197,16 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                           fontSize: 16,
                         ),
                       ),
-<<<<<<< HEAD
                       const SizedBox(height: 4),
                       Text(
                         email,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: subTextColor),
-=======
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
->>>>>>> origin/main
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        "Speaking Results: $count",
+                        "Speaking: $speakingCount  •  Reading: $readingCount",
                         style: const TextStyle(
                           color: primaryColor,
                           fontWeight: FontWeight.w600,
@@ -260,7 +219,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                 CircleAvatar(
                   backgroundColor: lightPrimary,
                   child: Text(
-                    latestScore > 0 ? latestScore.toStringAsFixed(1) : "-",
+                    latestScore,
                     style: const TextStyle(
                       color: primaryColor,
                       fontWeight: FontWeight.bold,
@@ -304,7 +263,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
           ),
           SizedBox(height: 6),
           Text(
-            "Users will appear here after saving speaking results.",
+            "Users will appear here after saving results.",
             textAlign: TextAlign.center,
             style: TextStyle(color: subTextColor),
           ),
@@ -360,11 +319,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-<<<<<<< HEAD
                           "Users With Results (${users.length})",
-=======
-                          "All Results (${results.length})",
->>>>>>> origin/main
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: primaryColor,
@@ -393,16 +348,17 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     );
   }
 }
-<<<<<<< HEAD
 
 class AdminUserResultDetailsPage extends StatelessWidget {
   final Map<String, dynamic> user;
   final List<Map<String, dynamic>> speakingResults;
+  final List<Map<String, dynamic>> readingResults;
 
   const AdminUserResultDetailsPage({
     super.key,
     required this.user,
     required this.speakingResults,
+    required this.readingResults,
   });
 
   static const bgColor = Color(0xFFF5F6FA);
@@ -501,11 +457,8 @@ class AdminUserResultDetailsPage extends StatelessWidget {
         padding: const EdgeInsets.all(18),
         child: Center(
           child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.35 < 300
-                ? 300
-                : MediaQuery.of(context).size.width * 0.35 > 560
-                    ? 560
-                    : MediaQuery.of(context).size.width * 0.35,
+            width: (MediaQuery.of(context).size.width * 0.35)
+                .clamp(300.0, 560.0),
             child: Column(
               children: [
                 Container(
@@ -553,7 +506,6 @@ class AdminUserResultDetailsPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-
                 _moduleCard(
                   icon: Icons.mic,
                   title: "Speaking",
@@ -571,21 +523,29 @@ class AdminUserResultDetailsPage extends StatelessWidget {
                     );
                   },
                 ),
-
+                _moduleCard(
+                  icon: Icons.menu_book,
+                  title: "Reading",
+                  subtitle: "${readingResults.length} results available",
+                  enabled: true,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AdminReadingResultOnlyPage(
+                          userName: displayName,
+                          readingResults: readingResults,
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 _moduleCard(
                   icon: Icons.edit,
                   title: "Writing",
                   subtitle: "Coming soon",
                   enabled: false,
                 ),
-
-                _moduleCard(
-                  icon: Icons.menu_book,
-                  title: "Reading",
-                  subtitle: "Coming soon",
-                  enabled: false,
-                ),
-
                 _moduleCard(
                   icon: Icons.headphones,
                   title: "Listening",
@@ -621,6 +581,24 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
     if (value == null) return "N/A";
     if (value.toString().trim().isEmpty) return "N/A";
     return value.toString();
+  }
+
+  Widget _smallScoreBox(String title, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: lightPrimary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        "$title: $value",
+        style: const TextStyle(
+          color: primaryColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
   }
 
   Widget _speakingResultCard(Map<String, dynamic> item) {
@@ -676,7 +654,6 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
           Text(
             "Topic: $topic",
             style: const TextStyle(
@@ -685,9 +662,7 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
               height: 1.4,
             ),
           ),
-
           const SizedBox(height: 12),
-
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -698,30 +673,20 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
               _smallScoreBox("Pronunciation", pronunciation),
             ],
           ),
-
           const SizedBox(height: 14),
-
           const Text(
             "Transcript",
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
             transcript,
             style: const TextStyle(color: subTextColor, height: 1.5),
           ),
-
           const SizedBox(height: 14),
-
           const Text(
             "Feedback",
-            style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(
@@ -733,24 +698,6 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _smallScoreBox(String title, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: lightPrimary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        "$title: $value",
-        style: const TextStyle(
-          color: primaryColor,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
@@ -768,10 +715,7 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
         iconTheme: const IconThemeData(color: textColor),
         title: Text(
           "$userName Speaking Results",
-          style: const TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(color: textColor, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -780,29 +724,7 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
           child: SizedBox(
             width: contentWidth,
             child: speakingResults.isEmpty
-                ? Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: const Color(0xFFE5E7EB)),
-                    ),
-                    child: const Column(
-                      children: [
-                        Icon(Icons.mic_none, size: 55, color: primaryColor),
-                        SizedBox(height: 12),
-                        Text(
-                          "No speaking results found",
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                            color: textColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
+                ? _emptyBox("No speaking results found", Icons.mic_none)
                 : Column(
                     children: speakingResults.map(_speakingResultCard).toList(),
                   ),
@@ -811,6 +733,192 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
       ),
     );
   }
+
+  Widget _emptyBox(String title, IconData icon) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 55, color: primaryColor),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
-=======
->>>>>>> origin/main
+
+class AdminReadingResultOnlyPage extends StatelessWidget {
+  final String userName;
+  final List<Map<String, dynamic>> readingResults;
+
+  const AdminReadingResultOnlyPage({
+    super.key,
+    required this.userName,
+    required this.readingResults,
+  });
+
+  static const bgColor = Color(0xFFF5F6FA);
+  static const primaryColor = Color(0xFFFF3B30);
+  static const lightPrimary = Color(0xFFFFE8E6);
+  static const textColor = Color(0xFF202124);
+  static const subTextColor = Color(0xFF6B7280);
+
+  String _safeText(dynamic value) {
+    if (value == null) return "N/A";
+    if (value.toString().trim().isEmpty) return "N/A";
+    return value.toString();
+  }
+
+  Widget _readingResultCard(Map<String, dynamic> item) {
+    final practiceType = _safeText(item['practice_type']);
+    final correctAnswers = _safeText(item['correct_answers']);
+    final totalQuestions = _safeText(item['total_questions']);
+    final percentage = _safeText(item['percentage']);
+    final bandScore = _safeText(item['band_score']);
+    final insight = _safeText(item['insight']);
+    final date = item['created_at']?.toString().split('T').first ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: lightPrimary,
+                child: Text(
+                  bandScore,
+                  style: const TextStyle(
+                    color: primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Reading - $practiceType",
+                  style: const TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              Text(
+                date,
+                style: const TextStyle(color: subTextColor, fontSize: 12),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "Score: $correctAnswers / $totalQuestions",
+            style: const TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Accuracy: $percentage%",
+            style: const TextStyle(color: subTextColor),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            "Insight",
+            style: TextStyle(color: textColor, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            insight,
+            style: const TextStyle(
+              color: primaryColor,
+              height: 1.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double contentWidth =
+        (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0);
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: textColor),
+        title: Text(
+          "$userName Reading Results",
+          style: const TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
+        child: Center(
+          child: SizedBox(
+            width: contentWidth,
+            child: readingResults.isEmpty
+                ? _emptyBox("No reading results found", Icons.menu_book)
+                : Column(
+                    children: readingResults.map(_readingResultCard).toList(),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _emptyBox(String title, IconData icon) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 55, color: primaryColor),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
