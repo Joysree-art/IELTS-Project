@@ -31,6 +31,8 @@ class _SpeakingPageState extends State<SpeakingPage> {
   bool _isSaving = false;
   bool _hasResult = false;
 
+  bool _isCustomTopic = false;
+
   int _prepSeconds = 60;
   int _speakSeconds = 300;
 
@@ -38,6 +40,9 @@ class _SpeakingPageState extends State<SpeakingPage> {
   String _topic = "";
   String _cuePoints = "";
   String _transcript = "";
+
+  final customTopicController = TextEditingController();
+  final customCueController = TextEditingController();
 
   double _bandScore = 0.0;
   String _fluency = "";
@@ -73,10 +78,15 @@ class _SpeakingPageState extends State<SpeakingPage> {
     _fetchHistory();
   }
 
+  
   @override
   void dispose() {
     _timer?.cancel();
     _speech.stop();
+
+    customTopicController.dispose();
+    customCueController.dispose();
+
     super.dispose();
   }
 
@@ -115,7 +125,30 @@ class _SpeakingPageState extends State<SpeakingPage> {
 
     _topic = selected['topic']?.toString() ?? '';
     _cuePoints = selected['cue_points']?.toString() ?? '';
+    _isCustomTopic = false;
   }
+
+  void _useCustomTopic() {
+  final topic = customTopicController.text.trim();
+  final cue = customCueController.text.trim();
+
+  if (topic.isEmpty) {
+    _showMessage("Enter your custom topic");
+    return;
+  }
+
+  setState(() {
+    _resetAll();
+    _topic = topic;
+    _cuePoints = _selectedPart == "Part 2" ? cue : "";
+    _isCustomTopic = true;
+  });
+
+  customTopicController.clear();
+  customCueController.clear();
+
+  _showMessage("Custom topic added temporarily. Result will not be saved.");
+}
 
   void _changePart(String part) {
     if (_isRecording || _isPreparing) return;
@@ -599,6 +632,66 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   ],
                 ),
               ),
+
+              _card(
+                child: Column(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+                  _sectionTitle(Icons.add_circle_outline, "Add Your Own Topic"),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                   controller: customTopicController,
+                   decoration: InputDecoration(
+                    hintText: "Enter your custom topic",
+                    filled: true,
+                    fillColor: const Color(0xFFFFF8FA),
+                    border: OutlineInputBorder(
+                     borderRadius: BorderRadius.circular(14),
+                     borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                if (_selectedPart == "Part 2") ...[
+                 const SizedBox(height: 12),
+                 TextField(
+                  controller: customCueController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: "Enter cue points for Part 2",
+                    filled: true,
+                    fillColor: const Color(0xFFFFF8FA),
+                    border: OutlineInputBorder(
+                     borderRadius: BorderRadius.circular(14),
+                     borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 14),
+
+              SizedBox(
+                 width: double.infinity,
+                 height: 48,
+                 child: ElevatedButton.icon(
+                    onPressed: _isRecording || _isPreparing ? null : _useCustomTopic,
+                    icon: const Icon(Icons.check, color: Color(0xFFE60046)),
+                    label: const Text(
+                       "Use This Topic Temporarily",
+                        style: TextStyle(
+                        color: Color(0xFFE60046),
+                        fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: _ashButtonStyle(),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
               _card(
                 child: Column(
                   children: [
@@ -801,6 +894,27 @@ class _SpeakingPageState extends State<SpeakingPage> {
                       _feedbackLine("Grammar", _grammar),
                       _feedbackLine("Pronunciation", _pronunciation),
                       const SizedBox(height: 18),
+                      if (_isCustomTopic)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEEF3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            "This is a temporary custom topic. Results will not be saved.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Color(0xFFE60046),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      else
+                      
+
+
                       SizedBox(
                         width: double.infinity,
                         height: 50,
