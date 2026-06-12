@@ -222,7 +222,7 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
   }) {
     final title = passage['title']?.toString() ?? 'Untitled Passage';
     final difficulty = passage['difficulty']?.toString() ?? 'medium';
-    final passageNumber = passage['passage_number'] ?? index + 1;
+    final passageNumber = index + 1;
     final text = passage['passage_text']?.toString() ?? '';
 
     final preview = text.length > 120 ? '${text.substring(0, 120)}...' : text;

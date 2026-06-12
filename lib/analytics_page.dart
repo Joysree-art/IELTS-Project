@@ -89,10 +89,28 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           ? 0.0
           : latestScores.reduce((a, b) => a + b) / latestScores.length;
 
-      double calculatedImprovement = 0.0;
-      if (readingScores.length > 1) {
-        calculatedImprovement = readingScores.first - readingScores[1];
+      double getAverage(List<double> scores) {
+        final validScores = scores.where((s) => s > 0).toList();
+        if (validScores.isEmpty) return 0.0;
+        return validScores.reduce((a, b) => a + b) / validScores.length;
       }
+
+      final latestOverallScores = [
+        readingScores.isNotEmpty ? readingScores[0] : 0.0,
+        writingScores.isNotEmpty ? writingScores[0] : 0.0,
+        speakingScores.isNotEmpty ? speakingScores[0] : 0.0,
+        listeningScores.isNotEmpty ? listeningScores[0] : 0.0,
+      ];
+
+      final previousOverallScores = [
+        readingScores.length > 1 ? readingScores[1] : 0.0,
+        writingScores.length > 1 ? writingScores[1] : 0.0,
+        speakingScores.length > 1 ? speakingScores[1] : 0.0,
+        listeningScores.length > 1 ? listeningScores[1] : 0.0,
+      ];
+
+      final calculatedImprovement =
+          getAverage(latestOverallScores) - getAverage(previousOverallScores);
 
       setState(() {
         readingScore = latestReading;
@@ -196,9 +214,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: _GradientCard(
-                                    title: "Reading Change",
+                                    title: "Overall Change",
                                     value: _improvementText(),
-                                    subtitle: "Latest vs previous",
+                                    subtitle: "Latest overall vs previous",
                                     colors: const [
                                       Color(0xFFFF2A2A),
                                       Color(0xFFF00058),

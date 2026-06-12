@@ -31,11 +31,16 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     setState(() => isLoading = true);
 
     try {
+<<<<<<< HEAD
       final resultsData = await supabase
+=======
+      final speakingData = await supabase
+>>>>>>> origin/main
           .from('speaking_results')
           .select()
           .order('created_at', ascending: false);
 
+<<<<<<< HEAD
       allResults = List<Map<String, dynamic>>.from(resultsData);
 
       final userIds = allResults
@@ -58,6 +63,42 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
           .inFilter('id', userIds);
 
       users = List<Map<String, dynamic>>.from(profilesData);
+=======
+      final readingData = await supabase
+          .from('reading_scores')
+          .select()
+          .order('created_at', ascending: false);
+
+      final speakingResults =
+          List<Map<String, dynamic>>.from(speakingData).map((e) {
+        return {
+          ...e,
+          'result_type': 'speaking',
+        };
+      }).toList();
+
+      final readingResults =
+          List<Map<String, dynamic>>.from(readingData).map((e) {
+        return {
+          ...e,
+          'result_type': 'reading',
+        };
+      }).toList();
+
+      final allResults = [...speakingResults, ...readingResults];
+
+      allResults.sort((a, b) {
+        final aDate = DateTime.tryParse(a['created_at']?.toString() ?? '') ??
+            DateTime(2000);
+        final bDate = DateTime.tryParse(b['created_at']?.toString() ?? '') ??
+            DateTime(2000);
+        return bDate.compareTo(aDate);
+      });
+
+      setState(() {
+        results = allResults;
+      });
+>>>>>>> origin/main
     } catch (e) {
       _showMessage("Failed to load results: $e");
     }
@@ -110,6 +151,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     );
   }
 
+<<<<<<< HEAD
   Widget _userCard(Map<String, dynamic> user) {
     final userId = user['id'].toString();
     final name = user['full_name']?.toString().trim();
@@ -119,6 +161,32 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     final latestScore = _latestScoreForUser(userId);
 
     final hasAvatar = avatarUrl != null && avatarUrl.trim().isNotEmpty;
+=======
+  Widget _resultCard(Map<String, dynamic> item) {
+    final resultType = item['result_type']?.toString() ?? '';
+    final date = item['created_at']?.toString().split('T').first ?? '';
+>>>>>>> origin/main
+
+    final title = resultType == 'reading'
+        ? 'Reading - ${item['practice_type'] ?? ''}'
+        : item['part']?.toString() ?? 'Speaking';
+
+    final topic = resultType == 'reading'
+        ? 'Score: ${item['correct_answers'] ?? 0} / ${item['total_questions'] ?? 0}'
+        : item['topic']?.toString() ?? '';
+
+    final transcript = resultType == 'reading'
+        ? 'Accuracy: ${item['percentage'] ?? 0}%'
+        : item['transcript']?.toString() ?? '';
+
+    final feedback = resultType == 'reading'
+        ? item['insight']?.toString() ??
+            'Band Score: ${item['band_score'] ?? '-'}'
+        : item['feedback']?.toString() ?? '';
+
+    final score = resultType == 'reading'
+        ? item['band_score']?.toString() ?? '-'
+        : item['score']?.toString() ?? '-';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -157,12 +225,25 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                           fontSize: 16,
                         ),
                       ),
+<<<<<<< HEAD
                       const SizedBox(height: 4),
                       Text(
                         email,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: subTextColor),
+=======
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+>>>>>>> origin/main
                       ),
                       const SizedBox(height: 6),
                       Text(
@@ -279,7 +360,11 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
+<<<<<<< HEAD
                           "Users With Results (${users.length})",
+=======
+                          "All Results (${results.length})",
+>>>>>>> origin/main
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: primaryColor,
@@ -308,6 +393,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     );
   }
 }
+<<<<<<< HEAD
 
 class AdminUserResultDetailsPage extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -726,3 +812,5 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
     );
   }
 }
+=======
+>>>>>>> origin/main

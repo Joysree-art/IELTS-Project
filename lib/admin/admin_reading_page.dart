@@ -32,6 +32,8 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
   String? savedPassageId;
   List<Map<String, dynamic>> generatedQuestions = [];
   List<Map<String, dynamic>> savedQuestions = [];
+  List<Map<String, dynamic>> savedPassages = [];
+  bool isEditMode = false;
 
   final questionTypes = const [
     'MCQ',
@@ -41,6 +43,11 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     'matching_information',
     'short_answer',
   ];
+  @override
+  void initState() {
+    super.initState();
+    _fetchSavedPassages();
+  }
 
   @override
   void dispose() {
@@ -90,7 +97,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     setState(() => isLoading = true);
 
     try {
-      // ===== GET NEXT PASSAGE NUMBER =====
       final lastPassage = await supabase
           .from('reading_passages')
           .select('passage_number')
@@ -101,7 +107,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
           ? 1
           : (lastPassage[0]['passage_number'] as int) + 1;
 
-      // ===== INSERT PASSAGE =====
       final inserted = await supabase
           .from('reading_passages')
           .insert({
@@ -299,17 +304,98 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     }
   }
 
+  Future<void> _fetchSavedPassages() async {
+    final data = await supabase
+        .from('reading_passages')
+        .select()
+        .order('created_at', ascending: false);
+
+    setState(() {
+      savedPassages = List<Map<String, dynamic>>.from(data);
+    });
+  }
+
+  Future<void> _openSavedPassage(Map<String, dynamic> passage) async {
+    setState(() {
+      savedPassageId = passage['id'].toString();
+      titleController.text = passage['title']?.toString() ?? '';
+      passageController.text = passage['passage_text']?.toString() ?? '';
+      sourceController.text = passage['source']?.toString() ?? 'Admin / AI';
+      difficulty = passage['difficulty']?.toString() ?? 'medium';
+      isEditMode = true;
+    });
+
+    await _fetchSavedQuestions();
+  }
+
+  Future<void> _updatePassage() async {
+    if (savedPassageId == null) {
+      _msg('Open a saved passage first');
+      return;
+    }
+
+    if (titleController.text.trim().isEmpty ||
+        passageController.text.trim().isEmpty) {
+      _msg('Title and passage required');
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final updated = await supabase
+          .from('reading_passages')
+          .update({
+            'title': titleController.text.trim(),
+            'passage_text': passageController.text.trim(),
+            'difficulty': difficulty,
+            'source': sourceController.text.trim(),
+          })
+          .eq('id', savedPassageId!)
+          .select();
+
+      if (updated.isEmpty) {
+        _msg('Passage update failed. Check Supabase update policy.');
+        return;
+      }
+
+      await _fetchSavedPassages();
+      _msg('Passage updated successfully');
+    } catch (e) {
+      _msg('Passage update failed: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
   Future<void> _fetchSavedQuestions() async {
     if (savedPassageId == null) return;
 
     final data = await supabase
         .from('reading_questions')
-        .select()
+        .select('''
+        *,
+        reading_options(*)
+      ''')
         .eq('passage_id', savedPassageId!)
         .order('question_order', ascending: true);
 
+    final questions = List<Map<String, dynamic>>.from(data);
+
+    for (final q in questions) {
+      final options = q['reading_options'];
+
+      if (options is List) {
+        options.sort((a, b) {
+          final ao = a['option_order'] ?? 0;
+          final bo = b['option_order'] ?? 0;
+          return ao.compareTo(bo);
+        });
+      }
+    }
+
     setState(() {
-      savedQuestions = List<Map<String, dynamic>>.from(data);
+      savedQuestions = questions;
     });
   }
 
@@ -344,6 +430,85 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       _msg('Question deleted');
     } catch (e) {
       _msg('Delete failed: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  Future<void> _deletePassage(String passageId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Passage'),
+        content: const Text(
+            'This will delete the passage and all its questions. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => isLoading = true);
+
+    try {
+      final questions = await supabase
+          .from('reading_questions')
+          .select('id')
+          .eq('passage_id', passageId);
+
+      for (final q in questions) {
+        await supabase
+            .from('reading_options')
+            .delete()
+            .eq('question_id', q['id']);
+      }
+
+      await supabase
+          .from('reading_questions')
+          .delete()
+          .eq('passage_id', passageId);
+
+      final remainingPassages = await supabase
+          .from('reading_passages')
+          .select('id')
+          .order('passage_number', ascending: true);
+
+      for (int i = 0; i < remainingPassages.length; i++) {
+        await supabase.from('reading_passages').update({
+          'passage_number': i + 1,
+        }).eq('id', remainingPassages[i]['id']);
+      }
+      if (savedPassageId == passageId) {
+        titleController.clear();
+        passageController.clear();
+        sourceController.text = 'Admin / AI';
+        savedPassageId = null;
+        savedQuestions.clear();
+        isEditMode = false;
+      }
+
+      final updatedPassages = await supabase
+          .from('reading_passages')
+          .select()
+          .order('created_at', ascending: false);
+
+      setState(() {
+        savedPassages = List<Map<String, dynamic>>.from(updatedPassages);
+      });
+
+      _msg('Passage deleted');
+    } catch (e) {
+      _msg('Passage delete failed: $e');
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -429,6 +594,236 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     );
   }
 
+  Widget _savedPassagesList() {
+    if (savedPassages.isEmpty) {
+      return const Text(
+        'No saved passages yet.',
+        style: TextStyle(color: Colors.grey),
+      );
+    }
+
+    return Column(
+      children: savedPassages.map((p) {
+        return Card(
+          child: ListTile(
+            title: Text(p['title']?.toString() ?? ''),
+            subtitle: Text('Difficulty: ${p['difficulty'] ?? ''}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () => _deletePassage(
+                    p['id'].toString(),
+                  ),
+                ),
+                const Icon(Icons.open_in_new),
+              ],
+            ),
+            onTap: () => _openSavedPassage(p),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  void _showEditQuestionDialog(Map<String, dynamic> q) {
+    final editQuestionController = TextEditingController(
+      text: q['question_text']?.toString() ?? '',
+    );
+    final editAnswerController = TextEditingController(
+      text: q['correct_answer']?.toString() ?? '',
+    );
+    final editExplanationController = TextEditingController(
+      text: q['explanation']?.toString() ?? '',
+    );
+
+    String editQuestionType = q['question_type']?.toString() ?? 'MCQ';
+
+    final options = q['reading_options'] is List
+        ? List<Map<String, dynamic>>.from(q['reading_options'])
+        : <Map<String, dynamic>>[];
+
+    final editOption1Controller = TextEditingController(
+      text:
+          options.isNotEmpty ? options[0]['option_text']?.toString() ?? '' : '',
+    );
+    final editOption2Controller = TextEditingController(
+      text:
+          options.length > 1 ? options[1]['option_text']?.toString() ?? '' : '',
+    );
+    final editOption3Controller = TextEditingController(
+      text:
+          options.length > 2 ? options[2]['option_text']?.toString() ?? '' : '',
+    );
+    final editOption4Controller = TextEditingController(
+      text:
+          options.length > 3 ? options[3]['option_text']?.toString() ?? '' : '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final showEditOptions = _hasOptions(editQuestionType);
+
+            return AlertDialog(
+              title: const Text('Edit Question'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _field(editQuestionController, 'Question Text',
+                        maxLines: 3),
+                    DropdownButtonFormField<String>(
+                      value: editQuestionType,
+                      decoration: const InputDecoration(
+                        labelText: 'Question Type',
+                        filled: true,
+                        fillColor: Colors.white,
+                        border: OutlineInputBorder(),
+                      ),
+                      items: questionTypes
+                          .map(
+                            (type) => DropdownMenuItem(
+                              value: type,
+                              child: Text(type),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setDialogState(() {
+                            editQuestionType = v;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    if (editQuestionType == 'true_false_not_given')
+                      DropdownButtonFormField<String>(
+                        value: editAnswerController.text.isEmpty
+                            ? null
+                            : editAnswerController.text,
+                        decoration: const InputDecoration(
+                          labelText: 'Correct Answer',
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'True', child: Text('True')),
+                          DropdownMenuItem(
+                              value: 'False', child: Text('False')),
+                          DropdownMenuItem(
+                            value: 'Not Given',
+                            child: Text('Not Given'),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            editAnswerController.text = v;
+                          }
+                        },
+                      )
+                    else
+                      _field(editAnswerController, 'Correct Answer'),
+                    const SizedBox(height: 12),
+                    _field(editExplanationController, 'Explanation',
+                        maxLines: 2),
+                    if (showEditOptions) ...[
+                      _field(editOption1Controller, 'Option 1'),
+                      _field(editOption2Controller, 'Option 2'),
+                      _field(editOption3Controller, 'Option 3'),
+                      _field(editOption4Controller, 'Option 4'),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      final cleanOptions = showEditOptions
+                          ? [
+                              editOption1Controller.text.trim(),
+                              editOption2Controller.text.trim(),
+                              editOption3Controller.text.trim(),
+                              editOption4Controller.text.trim(),
+                            ].where((e) => e.isNotEmpty).toList()
+                          : <String>[];
+
+                      if (editQuestionController.text.trim().isEmpty ||
+                          editAnswerController.text.trim().isEmpty) {
+                        _msg('Question and answer required');
+                        return;
+                      }
+
+                      if (showEditOptions && cleanOptions.length < 2) {
+                        _msg('This question type needs at least 2 options');
+                        return;
+                      }
+
+                      final updated = await supabase
+                          .from('reading_questions')
+                          .update({
+                            'question_text': editQuestionController.text.trim(),
+                            'question_type': _normalType(editQuestionType),
+                            'correct_answer': editAnswerController.text.trim(),
+                            'explanation':
+                                editExplanationController.text.trim(),
+                          })
+                          .eq('id', q['id'])
+                          .select();
+
+                      if (updated.isEmpty) {
+                        _msg('Question update failed. Check update policy.');
+                        return;
+                      }
+
+                      await supabase
+                          .from('reading_options')
+                          .delete()
+                          .eq('question_id', q['id']);
+
+                      if (showEditOptions && cleanOptions.isNotEmpty) {
+                        await supabase.from('reading_options').insert(
+                              List.generate(cleanOptions.length, (index) {
+                                return {
+                                  'question_id': q['id'],
+                                  'option_text': cleanOptions[index],
+                                  'option_order': index + 1,
+                                };
+                              }),
+                            );
+                      }
+
+                      if (ctx.mounted) Navigator.pop(ctx);
+
+                      await _fetchSavedQuestions();
+                      _msg('Question updated successfully');
+                    } catch (e) {
+                      _msg('Question update failed: $e');
+                    }
+                  },
+                  child: const Text('Update'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _savedList() {
     if (savedQuestions.isEmpty) {
       return const Text(
@@ -445,9 +840,26 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
             subtitle: Text(
               'Type: ${q['question_type']} | Answer: ${q['correct_answer']}',
             ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-              onPressed: () => _deleteQuestion(q['id'].toString()),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.edit,
+                    color: Colors.blue,
+                  ),
+                  onPressed: () => _showEditQuestionDialog(q),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Colors.red,
+                  ),
+                  onPressed: () => _deleteQuestion(
+                    q['id'].toString(),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -511,6 +923,8 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _title('Saved Passages'),
+                _savedPassagesList(),
                 _title('1. Passage'),
                 _field(titleController, 'Passage Title'),
                 _field(passageController, 'Passage Text', maxLines: 9),
@@ -537,11 +951,16 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton.icon(
-                    onPressed: isLoading ? null : _savePassage,
-                    icon: const Icon(Icons.save),
+                    onPressed: isLoading
+                        ? null
+                        : savedPassageId == null
+                            ? _savePassage
+                            : _updatePassage,
+                    icon: Icon(
+                        savedPassageId == null ? Icons.save : Icons.update),
                     label: Text(savedPassageId == null
                         ? 'Save Passage'
-                        : 'Passage Saved'),
+                        : 'Update Passage'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFDB2777),
                       foregroundColor: Colors.white,
