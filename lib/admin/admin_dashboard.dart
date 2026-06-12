@@ -47,9 +47,11 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
     try {
       final usersData = await supabase.from('profiles').select('id, role');
       final writingData = await supabase.from('writing_questions').select('id');
+      final speakingData = await supabase.from('speaking_topics').select('id');
 
       final usersList = List<Map<String, dynamic>>.from(usersData as List);
       final writingList = List<Map<String, dynamic>>.from(writingData as List);
+      final speakingList = List<Map<String, dynamic>>.from(speakingData as List);
 
       if (!mounted) return;
 
@@ -60,9 +62,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             .length;
 
         writingQuestions = writingList.length;
+        speakingTopics = speakingList.length;
 
         readingQuestions = 0;
-        speakingTopics = 0;
         listeningQuestions = 0;
       });
     } catch (e) {

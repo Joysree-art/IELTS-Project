@@ -3,13 +3,21 @@ import 'dart:typed_data';
 
 import 'login_page.dart';
 
+import 'home_page.dart';
+import 'analytics_page.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  final bool showBottomNav;
+
+  const ProfilePage({
+    super.key,
+    this.showBottomNav = true,
+  });
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -515,6 +523,42 @@ class _ProfilePageState extends State<ProfilePage> {
                 );
               },
             ),
+
+      bottomNavigationBar:
+       widget.showBottomNav
+        ? BottomNavigationBar(
+        currentIndex: 2,
+        selectedItemColor: Colors.red,
+        unselectedItemColor: Colors.grey,
+        onTap: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HomePage()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const AnalyticsPage()),
+            );
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            label: "Home",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: "Analytics",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Profile",
+          ),
+        ],
+      )
+       : null,
     );
   }
 }
