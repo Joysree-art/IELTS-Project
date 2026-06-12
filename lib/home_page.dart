@@ -116,13 +116,17 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> openProfilePage() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ProfilePage()),
-    );
+  await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const ProfilePage(
+        showBottomNav: false,
+      ),
+    ),
+  );
 
-    loadProfileImage();
-  }
+  loadProfileImage();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -357,9 +361,16 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (_) => const AnalyticsPage()),
             );
             fetchLatestScores();
-          } else if (index == 2) {
-            await openProfilePage();
-          }
+          } 
+          else if (index == 2) {
+            await Navigator.push(
+             context,
+             MaterialPageRoute(
+             builder: (_) => const ProfilePage(),
+            ),
+          );
+          loadProfileImage();
+        }
         },
         items: const [
           BottomNavigationBarItem(

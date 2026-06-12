@@ -206,10 +206,28 @@ Do not use markdown.
 Do not wrap JSON in ```json.
 Do not add explanation outside JSON.
 
-Use exactly this JSON structure:
+Evaluate the speaking answer using IELTS Speaking band descriptors.
+
+Score based on:
+- Fluency and Coherence
+- Lexical Resource
+- Grammatical Range and Accuracy
+- Pronunciation
+
+Rules:
+- Do not give the same band for every answer.
+- Very short answers should receive a low score.
+- Off-topic answers should receive a low score.
+- Average answers should receive around Band 5.0–6.0.
+- Good detailed answers should receive around Band 6.5–8.0.
+- Calculate the overall band_score from the four criteria.
+- band_score must be between 0 and 9 and may include .5 increments.
+- Return band_score as a string, for example "5.5", "6.0", or "7.0".
+
+Return ONLY valid JSON.
 
 {
-  "band_score": "6.5",
+  "band_score": "0.0",
   "fluency": "",
   "vocabulary": "",
   "grammar": "",

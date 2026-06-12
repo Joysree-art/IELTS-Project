@@ -98,6 +98,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final response = await supabase.auth.signUp(
         email: emailController.text.trim(),
         password: passwordController.text,
+        emailRedirectTo: 'http://localhost:3000',
         data: {
           'full_name': nameController.text.trim(),
           'phone': '',
@@ -107,13 +108,13 @@ class _RegisterPageState extends State<RegisterPage> {
       if (!mounted) return;
 
       if (response.user != null) {
-        
-
-        showMessage("Account Created Successfully");
+        showMessage(
+         "Confirmation email sent. Please verify your email, then login.",
+        );
 
         Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginPage()),
+         context,
+         MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       }
     } catch (e) {

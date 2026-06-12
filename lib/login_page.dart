@@ -82,12 +82,17 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } on AuthException catch (e) {
-      if (e.message.toLowerCase().contains('invalid login credentials')) {
-        _showSnackBar('Invalid email or password');
+      final msg = e.message.toLowerCase();
+
+      if (msg.contains('email not confirmed')) {
+       _showSnackBar('Please verify your email before login');
+      } else if (msg.contains('invalid login credentials')) {
+       _showSnackBar('Invalid email or password');
       } else {
-        _showSnackBar(e.message);
+      _showSnackBar(e.message);
       }
-    } catch (e) {
+    }
+    catch (e) {
       _showSnackBar('Error: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
