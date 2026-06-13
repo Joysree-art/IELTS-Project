@@ -56,7 +56,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       if (!mounted) return;
 
       setState(() {
-        totalUsers = usersList.length;
+        totalUsers = usersList
+            .where((user) => (user['role'] ?? 'user').toString() == 'user')
+            .length;
         totalAdmins = usersList
             .where((user) => (user['role'] ?? 'user').toString() == 'admin')
             .length;
@@ -321,7 +323,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: const Text(
-                                "Manage IELTSync content, users, questions, and results from here.",
+                                "Manage IELTSpire content, questions, users and results from here.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: primaryColor,
@@ -339,20 +341,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               mainAxisSpacing: 14,
                               childAspectRatio: 1.15,
                               children: [
-                                _statCard(
-                                  title: "Total Users",
-                                  value: totalUsers,
-                                  icon: Icons.people_outline,
-                                  onTap: () =>
-                                      _openPage(const AdminUsersPage()),
-                                ),
-                                _statCard(
-                                  title: "Admins",
-                                  value: totalAdmins,
-                                  icon: Icons.admin_panel_settings_outlined,
-                                  onTap: () =>
-                                      _openPage(const AdminUsersPage()),
-                                ),
                                 _statCard(
                                   title: "Writing",
                                   value: writingQuestions,
@@ -393,18 +381,23 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               ),
                             ),
                             const SizedBox(height: 14),
+
                             _menuCard(
-                              title: "Manage Users",
-                              subtitle: "View users and update user roles",
+                              title: "View Admin Users",
+                              subtitle: "View users and manage roles",
                               icon: Icons.people_outline,
-                              onTap: () => _openPage(const AdminUsersPage()),
+                              onTap: () => _openPage(
+                               const AdminUsersPage(initialFilter: 'All'),
+                               ),
                             ),
+                            
                             _menuCard(
                               title: "View Results",
                               subtitle: "Check user test results and scores",
                               icon: Icons.bar_chart_outlined,
                               onTap: () => _openPage(const AdminResultsPage()),
                             ),
+                            
                             const SizedBox(height: 18),
                             _logoutButton(),
                             const SizedBox(height: 30),

@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminUsersPage extends StatefulWidget {
-  const AdminUsersPage({super.key});
+  final String initialFilter;
+
+  const AdminUsersPage({
+    super.key,
+    this.initialFilter = 'All',
+  });
 
   @override
   State<AdminUsersPage> createState() => _AdminUsersPageState();
@@ -21,6 +26,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   @override
   void initState() {
     super.initState();
+    selectedFilter = widget.initialFilter;
     fetchUsers();
   }
 
@@ -30,7 +36,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     try {
       final data = await supabase
           .from('profiles')
-          .select('id, full_name, phone, email, role, created_at')
+          .select('id, full_name, phone, email, role, avatar_url, created_at')
           .order('created_at', ascending: false);
 
       users = List<Map<String, dynamic>>.from(data);
@@ -278,6 +284,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final phone = user['phone'] ?? 'No Phone';
     final role = (user['role'] ?? 'user').toString().toLowerCase();
     final joined = formatDate(user['created_at']);
+    final avatarUrl = user['avatar_url']?.toString();
+    final hasAvatar = avatarUrl != null && avatarUrl.trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -294,11 +302,20 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             backgroundColor: role == 'admin'
                 ? Colors.purple.withOpacity(0.15)
                 : Colors.red.withOpacity(0.15),
-            child: Icon(
-              role == 'admin' ? Icons.admin_panel_settings : Icons.person,
-              color: role == 'admin' ? Colors.purple : Colors.red,
-            ),
-          ),
+            backgroundImage: hasAvatar
+                ? NetworkImage(avatarUrl!)
+                : null,
+            child: !hasAvatar
+                ? Icon(
+                    role == 'admin'
+                        ? Icons.admin_panel_settings
+                        : Icons.person,
+                    color: role == 'admin'
+                        ? Colors.purple
+                       : Colors.red,
+                )
+                : null,
+           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
