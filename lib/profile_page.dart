@@ -391,7 +391,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 borderRadius: BorderRadius.circular(18),
                               ),
                               child: const Text(
-                                "Keep your IELTSync profile updated to track your IELTS practice progress, saved scores, and personal learning history accurately.",
+                                "Keep your IELTSpire profile updated to track your IELTS practice progress, saved scores, and personal learning history accurately.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   color: primaryColor,
