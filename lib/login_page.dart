@@ -54,13 +54,13 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (response.user != null) {
-         if (response.user!.emailConfirmedAt == null) {
-         await _supabase.auth.signOut();
-         _showSnackBar('Please verify your email before login');
-         return;
-       }
+        if (response.user!.emailConfirmedAt == null) {
+          await _supabase.auth.signOut();
+          _showSnackBar('Please verify your email before login');
+          return;
+        }
 
-      final profile = await _supabase
+        final profile = await _supabase
             .from('profiles')
             .select('role')
             .eq('id', response.user!.id)
@@ -75,9 +75,8 @@ class _LoginPageState extends State<LoginPage> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => role == 'admin'
-                ? const AdminDashboardPage()
-                : const HomePage(),
+            builder: (_) =>
+                role == 'admin' ? const AdminDashboardPage() : const HomePage(),
           ),
         );
       }
@@ -127,7 +126,6 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -142,7 +140,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(width: 10),
                       const Text(
-                        'IELTSync',
+                        'IELTSpire',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -151,31 +149,24 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 40),
-
                   const Text(
                     'Welcome Back',
                     style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                   ),
-
                   const SizedBox(height: 8),
-
                   const Text(
-                    'Login to continue',
+                    'Blends IELTS with aspire and inspire',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
-
                   const SizedBox(height: 30),
-
                   _inputField(
                     controller: _emailController,
                     hint: 'Email',
                     icon: Icons.email,
                   ),
-
                   const SizedBox(height: 20),
-
                   _inputField(
                     controller: _passwordController,
                     hint: 'Password',
@@ -194,9 +185,7 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
                   Row(
                     children: [
                       Checkbox(
@@ -210,9 +199,7 @@ class _LoginPageState extends State<LoginPage> {
                       const Text('Remember me'),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
                   SizedBox(
                     width: double.infinity,
                     height: 55,
@@ -235,9 +222,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

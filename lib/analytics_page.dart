@@ -34,6 +34,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     _fetchAllScores();
   }
 
+  double _ceilToHalfBand(double score) {
+    if (score <= 0) return 0.0;
+    return (score * 2).ceil() / 2;
+  }
+
   Future<void> _fetchAllScores() async {
     try {
       final user = Supabase.instance.client.auth.currentUser;
@@ -85,9 +90,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         latestListening,
       ].where((score) => score > 0).toList();
 
-      final calculatedOverall = latestScores.isEmpty
+      final rawOverall = latestScores.isEmpty
           ? 0.0
           : latestScores.reduce((a, b) => a + b) / latestScores.length;
+
+      final calculatedOverall = _ceilToHalfBand(rawOverall);
 
       double getAverage(List<double> scores) {
         final validScores = scores.where((s) => s > 0).toList();
@@ -763,7 +770,8 @@ class DonutChartPainter extends CustomPainter {
       start += sweep;
     }
 
-    final avg = total / scores.where((s) => s > 0).length.clamp(1, 4);
+    final rawAvg = total / scores.where((s) => s > 0).length.clamp(1, 4);
+    final avg = (rawAvg * 2).ceil() / 2;
 
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
