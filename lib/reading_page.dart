@@ -21,6 +21,13 @@ class ReadingPage extends StatefulWidget {
 class _ReadingPageState extends State<ReadingPage> {
   final supabase = Supabase.instance.client;
 
+  static const Color primaryRed = Color(0xFFDC2626);
+  static const Color darkRed = Color(0xFFB91C1C);
+  static const Color pageBackground = Colors.white;
+  static const Color cardBackground = Colors.white;
+  static const Color softBackground = Color(0xFFF9FAFB);
+  static const Color neutralBorder = Color(0xFFE5E7EB);
+
   bool isLoading = true;
   bool submitted = false;
   bool isSaving = false;
@@ -320,15 +327,17 @@ class _ReadingPageState extends State<ReadingPage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFFDF7F9),
+        backgroundColor: Colors.white,
         body: Center(
-          child: CircularProgressIndicator(color: Color(0xFFDB2777)),
+          child: CircularProgressIndicator(
+            color: Color(0xFFDC2626),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF7F9),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -336,6 +345,7 @@ class _ReadingPageState extends State<ReadingPage> {
             _buildProgressBar(),
             Expanded(
               child: RefreshIndicator(
+                color: Color(0xFFDC2626),
                 onRefresh: _fetchReadingTest,
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(16),
@@ -412,8 +422,8 @@ class _ReadingPageState extends State<ReadingPage> {
             },
             borderRadius: BorderRadius.circular(30),
             child: const CircleAvatar(
-              backgroundColor: Color(0xFFFCE7F3),
-              child: Icon(Icons.arrow_back, color: Color(0xFFDB2777)),
+              backgroundColor: cardBackground,
+              child: Icon(Icons.arrow_back, color: Color(0xFFDC2626)),
             ),
           ),
           const SizedBox(width: 12),
@@ -442,7 +452,7 @@ class _ReadingPageState extends State<ReadingPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF1F2),
+              color: pageBackground,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Row(
@@ -485,8 +495,8 @@ class _ReadingPageState extends State<ReadingPage> {
             child: LinearProgressIndicator(
               value: currentPracticeType == null ? 0 : progress,
               minHeight: 8,
-              backgroundColor: Colors.pink.shade100,
-              valueColor: const AlwaysStoppedAnimation(Color(0xFFDB2777)),
+              backgroundColor: neutralBorder,
+              valueColor: const AlwaysStoppedAnimation(Color(0xFFDC2626)),
             ),
           ),
         ],
@@ -569,21 +579,20 @@ class _ReadingPageState extends State<ReadingPage> {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFFFCE7F3) : Colors.white,
+            color: Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: active ? const Color(0xFFDB2777) : Colors.pink.shade100,
+              color: active ? primaryRed : neutralBorder,
               width: active ? 2 : 1,
             ),
           ),
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor:
-                    active ? const Color(0xFFDB2777) : const Color(0xFFFCE7F3),
+                backgroundColor: primaryRed,
                 child: Icon(
                   icon,
-                  color: active ? Colors.white : const Color(0xFFDB2777),
+                  color: Colors.white,
                 ),
               ),
               const SizedBox(width: 12),
@@ -599,8 +608,7 @@ class _ReadingPageState extends State<ReadingPage> {
                   ],
                 ),
               ),
-              if (active)
-                const Icon(Icons.check_circle, color: Color(0xFFDB2777)),
+              if (active) const Icon(Icons.check_circle, color: primaryRed),
             ],
           ),
         ),
@@ -636,7 +644,7 @@ class _ReadingPageState extends State<ReadingPage> {
             Text(
               difficulty.toUpperCase(),
               style: const TextStyle(
-                color: Color(0xFF38BDF8),
+                color: Color(0xFFDC2626),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -714,7 +722,7 @@ class _ReadingPageState extends State<ReadingPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.pink.shade100),
+        border: Border.all(color: neutralBorder),
       ),
       child: Column(
         children: [
@@ -722,11 +730,11 @@ class _ReadingPageState extends State<ReadingPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: const Color(0xFFFCE7F3),
+                backgroundColor: primaryRed,
                 child: Text(
                   '${index + 1}',
                   style: const TextStyle(
-                    color: Color(0xFFDB2777),
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -756,7 +764,7 @@ class _ReadingPageState extends State<ReadingPage> {
                   bookmarkedQuestions.contains(index)
                       ? Icons.bookmark
                       : Icons.bookmark_border,
-                  color: const Color(0xFFDB2777),
+                  color: primaryRed,
                 ),
               ),
             ],
@@ -768,13 +776,14 @@ class _ReadingPageState extends State<ReadingPage> {
               margin: const EdgeInsets.only(left: 56),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFFDF2F8),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: primaryRed),
               ),
               child: Text(
                 question['question_type']?.toString() ?? '',
                 style: const TextStyle(
-                  color: Color(0xFFDB2777),
+                  color: primaryRed,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -862,7 +871,7 @@ class _ReadingPageState extends State<ReadingPage> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDB2777), width: 2),
+            borderSide: const BorderSide(color: primaryRed, width: 2),
           ),
         ),
       ),
@@ -881,12 +890,12 @@ class _ReadingPageState extends State<ReadingPage> {
         selected &&
         _normalize(optionText) != _normalize(correctAnswer);
 
-    Color borderColor = Colors.pink.shade100;
+    Color borderColor = neutralBorder;
     Color bgColor = Colors.white;
 
     if (selected) {
-      borderColor = const Color(0xFFDB2777);
-      bgColor = const Color(0xFFFDF2F8);
+      borderColor = primaryRed;
+      bgColor = primaryRed;
     }
 
     if (isCorrect) {
@@ -896,7 +905,7 @@ class _ReadingPageState extends State<ReadingPage> {
 
     if (isWrong) {
       borderColor = Colors.red;
-      bgColor = const Color(0xFFFEE2E2);
+      bgColor = cardBackground;
     }
 
     return GestureDetector(
@@ -921,14 +930,15 @@ class _ReadingPageState extends State<ReadingPage> {
             Expanded(
               child: Text(
                 optionText,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: selected && !submitted ? Colors.white : Colors.black87,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
             ),
             if (selected && !submitted)
-              const Icon(Icons.check_circle, color: Color(0xFFDB2777)),
+              const Icon(Icons.check_circle, color: Colors.white),
             if (isCorrect) const Icon(Icons.check_circle, color: Colors.green),
             if (isWrong) const Icon(Icons.cancel, color: Colors.red),
           ],
@@ -999,7 +1009,7 @@ class _ReadingPageState extends State<ReadingPage> {
               }
             : null,
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFDB2777),
+          backgroundColor: primaryRed,
           disabledBackgroundColor: Colors.grey.shade300,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
@@ -1054,7 +1064,7 @@ class _ReadingPageState extends State<ReadingPage> {
           const Text(
             'Insight',
             style: TextStyle(
-              color: Color(0xFF38BDF8),
+              color: Color(0xFFDC2626),
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -1082,7 +1092,7 @@ class _ReadingPageState extends State<ReadingPage> {
             Text(
               value,
               style: const TextStyle(
-                color: Color(0xFF38BDF8),
+                color: Color(0xFFDC2626),
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
@@ -1122,7 +1132,7 @@ class _ReadingPageState extends State<ReadingPage> {
     return BottomNavigationBar(
       currentIndex: 0,
       onTap: _goToPage,
-      selectedItemColor: const Color(0xFFDB2777),
+      selectedItemColor: const Color(0xFFDC2626),
       unselectedItemColor: Colors.grey,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
