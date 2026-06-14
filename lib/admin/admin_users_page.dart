@@ -31,6 +31,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   }
 
   Future<void> fetchUsers() async {
+    if (!mounted) return;
+
     setState(() => isLoading = true);
 
     try {
@@ -43,10 +45,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       applyFilter();
     } catch (e) {
       _msg('Failed to load users: $e');
-    }
-
-    if (mounted) {
-      setState(() => isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -71,7 +73,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       return matchesSearch;
     }).toList();
 
-    if (mounted) setState(() {});
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   int get totalUsers => users.length;
@@ -86,6 +90,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
   void _msg(String text) {
     if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(text)),
     );
@@ -129,7 +134,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         ],
       ),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: red))
+          ? const Center(
+              child: CircularProgressIndicator(color: red),
+            )
           : RefreshIndicator(
               onRefresh: fetchUsers,
               child: SingleChildScrollView(
@@ -196,7 +203,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         padding: EdgeInsets.only(top: 80),
                         child: Text(
                           'No users found',
-                          style: TextStyle(color: Colors.grey, fontSize: 18),
+                          style: TextStyle(
+                            color: Colors.grey,
+                            fontSize: 18,
+                          ),
                         ),
                       )
                     else
@@ -231,7 +241,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           border: Border.all(color: const Color(0xFFFFD9DE)),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.12),
+              color: color.withValues(alpha: 0.12),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -252,7 +262,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
             Text(
               title,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.grey, fontSize: 13),
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 13,
+              ),
             ),
           ],
         ),
@@ -284,6 +297,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final phone = user['phone'] ?? 'No Phone';
     final role = (user['role'] ?? 'user').toString().toLowerCase();
     final joined = formatDate(user['created_at']);
+
     final avatarUrl = user['avatar_url']?.toString();
     final hasAvatar = avatarUrl != null && avatarUrl.trim().isNotEmpty;
 
@@ -300,22 +314,16 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           CircleAvatar(
             radius: 28,
             backgroundColor: role == 'admin'
-                ? Colors.purple.withOpacity(0.15)
-                : Colors.red.withOpacity(0.15),
-            backgroundImage: hasAvatar
-                ? NetworkImage(avatarUrl!)
-                : null,
+                ? Colors.purple.withValues(alpha: 0.15)
+                : Colors.red.withValues(alpha: 0.15),
+            backgroundImage: hasAvatar ? NetworkImage(avatarUrl) : null,
             child: !hasAvatar
                 ? Icon(
-                    role == 'admin'
-                        ? Icons.admin_panel_settings
-                        : Icons.person,
-                    color: role == 'admin'
-                        ? Colors.purple
-                       : Colors.red,
-                )
+                    role == 'admin' ? Icons.admin_panel_settings : Icons.person,
+                    color: role == 'admin' ? Colors.purple : Colors.red,
+                  )
                 : null,
-           ),
+          ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -371,7 +379,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

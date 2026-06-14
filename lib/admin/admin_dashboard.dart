@@ -42,16 +42,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Future<void> _loadDashboardData() async {
     if (!mounted) return;
+
     setState(() => isLoading = true);
 
     try {
       final usersData = await supabase.from('profiles').select('id, role');
       final writingData = await supabase.from('writing_questions').select('id');
       final speakingData = await supabase.from('speaking_topics').select('id');
+      final readingData = await supabase.from('reading_passages').select('id');
 
       final usersList = List<Map<String, dynamic>>.from(usersData as List);
       final writingList = List<Map<String, dynamic>>.from(writingData as List);
-      final speakingList = List<Map<String, dynamic>>.from(speakingData as List);
+      final speakingList =
+          List<Map<String, dynamic>>.from(speakingData as List);
+      final readingList = List<Map<String, dynamic>>.from(readingData as List);
 
       if (!mounted) return;
 
@@ -59,22 +63,22 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         totalUsers = usersList
             .where((user) => (user['role'] ?? 'user').toString() == 'user')
             .length;
+
         totalAdmins = usersList
             .where((user) => (user['role'] ?? 'user').toString() == 'admin')
             .length;
 
         writingQuestions = writingList.length;
         speakingTopics = speakingList.length;
-
-        readingQuestions = 0;
+        readingQuestions = readingList.length;
         listeningQuestions = 0;
       });
     } catch (e) {
       _showMessage("Dashboard load failed: ${e.toString()}");
-    }
-
-    if (mounted) {
-      setState(() => isLoading = false);
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -381,23 +385,20 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                               ),
                             ),
                             const SizedBox(height: 14),
-
                             _menuCard(
                               title: "View Admin Users",
                               subtitle: "View users and manage roles",
                               icon: Icons.people_outline,
                               onTap: () => _openPage(
-                               const AdminUsersPage(initialFilter: 'All'),
-                               ),
+                                const AdminUsersPage(initialFilter: 'All'),
+                              ),
                             ),
-                            
                             _menuCard(
                               title: "View Results",
                               subtitle: "Check user test results and scores",
                               icon: Icons.bar_chart_outlined,
                               onTap: () => _openPage(const AdminResultsPage()),
                             ),
-                            
                             const SizedBox(height: 18),
                             _logoutButton(),
                             const SizedBox(height: 30),
