@@ -2,11 +2,7 @@
 
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
-<<<<<<< HEAD
         android:label="third_year_project"
-=======
-        android:label="project_one"
->>>>>>> 6933b38 (Initial Flutter project)
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
