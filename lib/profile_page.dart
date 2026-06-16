@@ -449,7 +449,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 TextButton.icon(
                                   onPressed: _pickAndUploadImage,
                                   icon: const Icon(
-                                    Icons.upload,
+                                    Icons.edit_outlined,
                                     size: 18,
                                     color: primaryColor,
                                   ),
