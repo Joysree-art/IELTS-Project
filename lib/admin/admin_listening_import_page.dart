@@ -386,12 +386,17 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
 
             title('2. Select Test'),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: selectedTestId,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: tests.map((test) {
                 return DropdownMenuItem<String>(
                   value: test['id'],
-                  child: Text(test['title']),
+                  child: Text(
+  test['title'],
+  overflow: TextOverflow.ellipsis,
+  maxLines: 1,
+),
                 );
               }).toList(),
               onChanged: (value) async {
@@ -402,6 +407,7 @@ class _AdminListeningPageState extends State<AdminListeningPage> {
 
             title('3. Add Listening Part'),
             DropdownButtonFormField<String>(
+            isExpanded: true,
               value: selectedPart,
               decoration: const InputDecoration(
                 labelText: 'Part',
@@ -450,6 +456,7 @@ if (sections.isNotEmpty) ...[
 
             title('4. Select Section'),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: selectedSectionId,
               decoration: const InputDecoration(border: OutlineInputBorder()),
               items: sections.map((section) {
@@ -493,6 +500,7 @@ if (sections.isNotEmpty) ...[
 
             input(questionNo, 'Question no'),
             DropdownButtonFormField<String>(
+              isExpanded: true,
               value: selectedType,
               decoration: const InputDecoration(
                 labelText: 'Question type',

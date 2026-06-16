@@ -202,45 +202,53 @@ class _AdminSpeakingPageState extends State<AdminSpeakingPage> {
                 ),
               ],
               const SizedBox(height: 12),
-              Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.spaceBetween,
-              children: [
-             _chip(selectedPart),
+              
 
-             if (category.isNotEmpty)
-             _chip(category),
+Wrap(
+  spacing: 8,
+  runSpacing: 8,
+  children: [
+    _chip(selectedPart),
 
-            _chip(difficulty),
+    if (category.isNotEmpty)
+      _chip(category),
 
-             Row(
-             mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: () => _openTopicSheet(topic: item),
-          icon: const Icon(
-            Icons.edit_outlined,
-            color: primaryColor,
-          ),
-        ),
-        IconButton(
-          onPressed: () => _confirmDelete(item),
-          icon: const Icon(
-            Icons.delete_outline,
-            color: primaryColor,
-          ),
-        ),
-      ],
-    ),
+    _chip(difficulty),
   ],
-)
-            ],
+),
+
+const SizedBox(height: 8),
+
+Align(
+  alignment: Alignment.centerRight,
+  child: Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      IconButton(
+        onPressed: () => _openTopicSheet(topic: item),
+        icon: const Icon(
+          Icons.edit_outlined,
+          color: primaryColor,
+        ),
+      ),
+      IconButton(
+        onPressed: () => _confirmDelete(item),
+        icon: const Icon(
+          Icons.delete_outline,
+          color: primaryColor,
+        ),
+      ),
+    ],
+  ),
+),
+
+],
           ),
         ),
       ),
     );
   }
+
 
   Widget _chip(String text) {
     return Container(
@@ -259,6 +267,7 @@ class _AdminSpeakingPageState extends State<AdminSpeakingPage> {
       ),
     );
   }
+  
 
   Widget _emptyState() {
     return Container(
