@@ -154,7 +154,7 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "IELTSync",
+                          "IELTSpire",
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
@@ -162,7 +162,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         SizedBox(height: 3),
                         Text(
-                          "Practice. Improve. Achieve.",
+                          "Blends IELTS with aspire or inspire",
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey,

@@ -202,26 +202,39 @@ class _AdminSpeakingPageState extends State<AdminSpeakingPage> {
                 ),
               ],
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  _chip(selectedPart),
-                  if (category.isNotEmpty) ...[
-                     const SizedBox(width: 8),
-                     _chip(category),
-                    ],
-                  const SizedBox(width: 8),
-                  _chip(difficulty),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => _openTopicSheet(topic: item),
-                    icon: const Icon(Icons.edit_outlined, color: primaryColor),
-                  ),
-                  IconButton(
-                    onPressed: () => _confirmDelete(item),
-                    icon: const Icon(Icons.delete_outline, color: primaryColor),
-                  ),
-                ],
-              ),
+              Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              children: [
+             _chip(selectedPart),
+
+             if (category.isNotEmpty)
+             _chip(category),
+
+            _chip(difficulty),
+
+             Row(
+             mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: () => _openTopicSheet(topic: item),
+          icon: const Icon(
+            Icons.edit_outlined,
+            color: primaryColor,
+          ),
+        ),
+        IconButton(
+          onPressed: () => _confirmDelete(item),
+          icon: const Icon(
+            Icons.delete_outline,
+            color: primaryColor,
+          ),
+        ),
+      ],
+    ),
+  ],
+)
             ],
           ),
         ),
@@ -317,8 +330,11 @@ class _AdminSpeakingPageState extends State<AdminSpeakingPage> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final screenWidth = constraints.maxWidth;
-          final double contentWidth =
-              (screenWidth * 0.35).clamp(300.0, 520.0).toDouble();
+          final bool isMobile = screenWidth < 600;
+
+          final double contentWidth = isMobile
+          ? screenWidth
+             : (screenWidth * 0.6).clamp(500.0, 900.0).toDouble();
           final bool isSmallScreen = screenWidth <= 320;
 
           return RefreshIndicator(

@@ -277,6 +277,49 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       },
     );
   }
+  Future<void> deleteUser(Map<String, dynamic> user) async {
+  final userId = user['id'];
+  final name = user['full_name'] ?? 'this user';
+  if ((user['role'] ?? 'user').toString().toLowerCase() == 'admin') {
+  _msg('Admin accounts cannot be deleted');
+  return;
+  }
+
+  if (userId == supabase.auth.currentUser?.id) {
+    _msg("You cannot delete your own admin account");
+    return;
+  }
+
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Delete User'),
+      content: Text('Are you sure you want to remove $name?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Delete', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  try {
+    await supabase.from('profiles').delete().eq('id', userId);
+
+    _msg('User removed');
+    fetchUsers();
+  } catch (e) {
+    _msg('Delete failed: $e');
+  }
+}
 
   Widget _userCard(Map<String, dynamic> user) {
     final name = user['full_name'] ?? 'No Name';
@@ -359,6 +402,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               ],
             ),
           ),
+          
+          if (role == 'user')
+          IconButton(
+           icon: const Icon(Icons.delete, color: Colors.red),
+           onPressed: () => deleteUser(user),
+         ),
         ],
       ),
     );

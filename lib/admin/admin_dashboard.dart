@@ -26,7 +26,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   int writingQuestions = 0;
   int readingQuestions = 0;
   int speakingTopics = 0;
-  int listeningQuestions = 0;
+  int listeningTests = 0;
 
   static const bgColor = Color(0xFFF5F6FA);
   static const primaryColor = Color(0xFFFF3B30);
@@ -48,10 +48,12 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
       final usersData = await supabase.from('profiles').select('id, role');
       final writingData = await supabase.from('writing_questions').select('id');
       final speakingData = await supabase.from('speaking_topics').select('id');
+      final listeningData = await supabase.from('listening_tests').select('id');
 
       final usersList = List<Map<String, dynamic>>.from(usersData as List);
       final writingList = List<Map<String, dynamic>>.from(writingData as List);
       final speakingList = List<Map<String, dynamic>>.from(speakingData as List);
+      final listeningList = List<Map<String, dynamic>>.from(listeningData as List);
 
       if (!mounted) return;
 
@@ -59,15 +61,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
         totalUsers = usersList
             .where((user) => (user['role'] ?? 'user').toString() == 'user')
             .length;
+
         totalAdmins = usersList
             .where((user) => (user['role'] ?? 'user').toString() == 'admin')
             .length;
 
         writingQuestions = writingList.length;
         speakingTopics = speakingList.length;
-
         readingQuestions = 0;
-        listeningQuestions = 0;
+        listeningTests = listeningList.length;
       });
     } catch (e) {
       _showMessage("Dashboard load failed: ${e.toString()}");
@@ -120,48 +122,51 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
   }) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
+                radius: 20,
                 backgroundColor: lightPrimary,
-                child: Icon(icon, color: primaryColor),
+                child: Icon(icon, color: primaryColor, size: 22),
               ),
-              const Spacer(),
+              const SizedBox(height: 12),
               Text(
                 value.toString(),
                 style: const TextStyle(
-                  fontSize: 28,
+                  fontSize: 26,
                   fontWeight: FontWeight.bold,
                   color: textColor,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Row(
                 children: [
                   Expanded(
                     child: Text(
                       title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         color: subTextColor,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                   const Icon(
                     Icons.arrow_forward_ios,
-                    size: 13,
+                    size: 12,
                     color: subTextColor,
                   ),
                 ],
@@ -188,7 +193,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           borderRadius: BorderRadius.circular(20),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFE5E7EB)),
@@ -196,7 +201,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 26,
+                  radius: 24,
                   backgroundColor: lightPrimary,
                   child: Icon(icon, color: primaryColor),
                 ),
@@ -207,8 +212,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                     children: [
                       Text(
                         title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
                           color: textColor,
                         ),
@@ -216,8 +223,10 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 12,
                           color: subTextColor,
                         ),
                       ),
@@ -226,7 +235,7 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                 ),
                 const Icon(
                   Icons.arrow_forward_ios,
-                  size: 16,
+                  size: 15,
                   color: subTextColor,
                 ),
               ],
@@ -270,6 +279,9 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final contentWidth = screenWidth > 600 ? 520.0 : double.infinity;
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: AppBar(
@@ -293,121 +305,125 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
           ? const Center(
               child: CircularProgressIndicator(color: primaryColor),
             )
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final screenWidth = constraints.maxWidth;
-                final double contentWidth =
-                    (screenWidth * 0.35).clamp(300.0, 520.0).toDouble();
-                final bool isSmallScreen = screenWidth <= 320;
+          : RefreshIndicator(
+              onRefresh: _loadDashboardData,
+              color: primaryColor,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 18,
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: contentWidth,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: lightPrimary,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: const Text(
+                            "Manage IELTSpire content, questions, users and results from here.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: primaryColor,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
 
-                return RefreshIndicator(
-                  onRefresh: _loadDashboardData,
-                  color: primaryColor,
-                  child: SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 12 : 18,
-                      vertical: 18,
-                    ),
-                    child: Center(
-                      child: SizedBox(
-                        width: contentWidth,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        const SizedBox(height: 20),
+
+                        GridView.count(
+                          crossAxisCount: 2,
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 0.95,
                           children: [
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                              decoration: BoxDecoration(
-                                color: lightPrimary,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text(
-                                "Manage IELTSpire content, questions, users and results from here.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 1.15,
-                              children: [
-                                _statCard(
-                                  title: "Writing",
-                                  value: writingQuestions,
-                                  icon: Icons.edit_note,
-                                  onTap: () =>
-                                      _openPage(const AdminWritingPage()),
-                                ),
-                                _statCard(
-                                  title: "Reading",
-                                  value: readingQuestions,
-                                  icon: Icons.menu_book_outlined,
-                                  onTap: () =>
-                                      _openPage(const AdminReadingPage()),
-                                ),
-                                _statCard(
-                                  title: "Speaking",
-                                  value: speakingTopics,
-                                  icon: Icons.mic_none,
-                                  onTap: () =>
-                                      _openPage(const AdminSpeakingPage()),
-                                ),
-                                _statCard(
-                                  title: "Listening",
-                                  value: listeningQuestions,
-                                  icon: Icons.headphones_outlined,
-                                  onTap: () =>
-                                      _openPage(const AdminListeningPage()),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 26),
-                            const Text(
-                              "Admin Actions",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            _menuCard(
-                              title: "View Admin Users",
-                              subtitle: "View users and manage roles",
-                              icon: Icons.people_outline,
+                            _statCard(
+                              title: "Writing",
+                              value: writingQuestions,
+                              icon: Icons.edit_note,
                               onTap: () => _openPage(
-                               const AdminUsersPage(initialFilter: 'All'),
-                               ),
+                                const AdminWritingPage(),
+                              ),
                             ),
-                            
-                            _menuCard(
-                              title: "View Results",
-                              subtitle: "Check user test results and scores",
-                              icon: Icons.bar_chart_outlined,
-                              onTap: () => _openPage(const AdminResultsPage()),
+                            _statCard(
+                              title: "Reading",
+                              value: readingQuestions,
+                              icon: Icons.menu_book_outlined,
+                              onTap: () => _openPage(
+                                const AdminReadingPage(),
+                              ),
                             ),
-                            
-                            const SizedBox(height: 18),
-                            _logoutButton(),
-                            const SizedBox(height: 30),
+                            _statCard(
+                              title: "Speaking",
+                              value: speakingTopics,
+                              icon: Icons.mic_none,
+                              onTap: () => _openPage(
+                                const AdminSpeakingPage(),
+                              ),
+                            ),
+                            _statCard(
+                              title: listeningTests == 1
+                                  ? "Listening Test"
+                                  : "Listening Tests",
+                              value: listeningTests,
+                              icon: Icons.headphones_outlined,
+                              onTap: () => _openPage(
+                                const AdminListeningPage(),
+                              ),
+                            ),
                           ],
                         ),
-                      ),
+
+                        const SizedBox(height: 26),
+
+                        const Text(
+                          "Admin Actions",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        _menuCard(
+                          title: "View Admin Users",
+                          subtitle: "View users and manage roles",
+                          icon: Icons.people_outline,
+                          onTap: () => _openPage(
+                            const AdminUsersPage(initialFilter: 'All'),
+                          ),
+                        ),
+
+                        _menuCard(
+                          title: "View Results",
+                          subtitle: "Check user test results and scores",
+                          icon: Icons.bar_chart_outlined,
+                          onTap: () => _openPage(
+                            const AdminResultsPage(),
+                          ),
+                        ),
+
+                        const SizedBox(height: 18),
+                        _logoutButton(),
+                        const SizedBox(height: 30),
+                      ],
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             ),
     );
   }

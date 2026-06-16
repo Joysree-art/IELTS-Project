@@ -22,6 +22,7 @@ class GroqService {
           {'role': 'user', 'content': prompt}
         ],
         'temperature': 0.1,
+        'max_tokens': 1800,
         'response_format': {'type': 'json_object'},
       }),
     );
@@ -129,11 +130,20 @@ Use exactly this JSON structure:
   "vocabulary_score": 0,
   "grammar_score": 0,
   "band_score": 0,
-  "overall_feedback": "",
-  "grammar_feedback": "",
-  "vocabulary_feedback": "",
-  "coherence_feedback": "",
-  "improvement_tips": []
+  "overall_feedback": "Write 4-6 detailed sentences explaining the overall writing quality.",
+  "grammar_feedback": "Write 4-6 detailed sentences. Mention grammar mistakes, sentence structure, tense, articles, punctuation, and complex sentence accuracy.",
+  "vocabulary_feedback": "Write 4-6 detailed sentences. Mention word choice, repetition, collocation, spelling, and academic vocabulary.",
+  "coherence_feedback": "Write 4-6 detailed sentences. Mention paragraphing, linking words, logical flow, progression, and clarity.",
+  "strengths": ["", "", ""],
+  "weaknesses": ["", "", ""],
+  "sentence_corrections": [
+    {
+      "original": "",
+      "improved": "",
+      "reason": ""
+    }
+  ],
+  "improvement_tips": ["", "", "", ""]
 }
 ''';
 
@@ -175,6 +185,11 @@ Use exactly this JSON structure:
       'improvement_tips': decoded['improvement_tips'] is List
           ? decoded['improvement_tips']
           : <String>[],
+      'strengths': decoded['strengths'] is List ? decoded['strengths'] : <String>[],
+      'weaknesses': decoded['weaknesses'] is List ? decoded['weaknesses'] : <String>[],
+      'sentence_corrections': decoded['sentence_corrections'] is List
+    ? decoded['sentence_corrections']
+    : <dynamic>[],
     };
   } catch (e) {
     throw Exception('Failed to parse Groq writing JSON: $cleanText');

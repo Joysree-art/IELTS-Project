@@ -29,33 +29,31 @@ class _AdminWritingPageState extends State<AdminWritingPage>
   }
 
   Future<void> fetchQuestions() async {
-    setState(() => isLoading = true);
+  setState(() => isLoading = true);
 
-    try {
-      final task1 = await supabase
-          .from('writing_questions')
-          .select()
-          .eq('task_type', 'task1')
-          .isFilter('user_id', null)
-          .order('created_at', ascending: false);
+  try {
+    final task1 = await supabase
+        .from('writing_questions')
+        .select()
+        .eq('task_type', 'task1')
+        .order('created_at', ascending: false);
 
-      final task2 = await supabase
-          .from('writing_questions')
-          .select()
-          .eq('task_type', 'task2')
-          .isFilter('user_id', null)
-          .order('created_at', ascending: false);
+    final task2 = await supabase
+        .from('writing_questions')
+        .select()
+        .eq('task_type', 'task2')
+        .order('created_at', ascending: false);
 
-      setState(() {
-        task1Questions = List<Map<String, dynamic>>.from(task1);
-        task2Questions = List<Map<String, dynamic>>.from(task2);
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() => isLoading = false);
-      showMsg('Failed to load questions: $e');
-    }
+    setState(() {
+      task1Questions = List<Map<String, dynamic>>.from(task1);
+      task2Questions = List<Map<String, dynamic>>.from(task2);
+      isLoading = false;
+    });
+  } catch (e) {
+    setState(() => isLoading = false);
+    showMsg('Failed to load questions: $e');
   }
+}
 
   void showMsg(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -223,7 +221,7 @@ class _AdminWritingPageState extends State<AdminWritingPage>
                   children: [
                     _chip(q['question_type'] ?? ''),
                     _chip(q['difficulty'] ?? ''),
-                    _chip('Public'),
+                    _chip(q['user_id'] == null ? 'Public' : 'User Private'),
                   ],
                 ),
                 if ((q['image_url'] ?? '').toString().isNotEmpty) ...[

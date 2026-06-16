@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+
+
+
 class AdminResultsPage extends StatefulWidget {
   const AdminResultsPage({super.key});
 
@@ -16,6 +19,9 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
   List<Map<String, dynamic>> users = [];
   List<Map<String, dynamic>> speakingResults = [];
   List<Map<String, dynamic>> readingResults = [];
+  List<Map<String, dynamic>> writingTestResults = [];
+ List<Map<String, dynamic>> writingPracticeResults = [];
+ List<Map<String, dynamic>> listeningResults = [];
 
   static const bgColor = Color(0xFFF5F6FA);
   static const primaryColor = Color(0xFFFF3B30);
@@ -42,15 +48,39 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
           .from('reading_scores')
           .select()
           .order('created_at', ascending: false);
+      final writingTestData = await supabase
+    .from('writing_test_results')
+    .select('''
+      *,
+      task1_question:writing_questions!writing_test_results_task1_question_id_fkey(title, question_text),
+      task2_question:writing_questions!writing_test_results_task2_question_id_fkey(title, question_text)
+    ''')
+    .order('created_at', ascending: false);
+
+   final writingPracticeData = await supabase
+    .from('writing_practice_results')
+    .select('*, question:writing_questions(title, question_text)')
+    .order('created_at', ascending: false);
+
+   final listeningData = await supabase
+    .from('user_listening_attempts')
+    .select('*, listening_tests(title)')
+    .order('created_at', ascending: false);
+
+writingTestResults = List<Map<String, dynamic>>.from(writingTestData);
+writingPracticeResults = List<Map<String, dynamic>>.from(writingPracticeData);
+listeningResults = List<Map<String, dynamic>>.from(listeningData);
 
       speakingResults = List<Map<String, dynamic>>.from(speakingData);
       readingResults = List<Map<String, dynamic>>.from(readingData);
 
       final userIds = [
-        ...speakingResults.map((e) => e['user_id']?.toString()),
-        ...readingResults.map((e) => e['user_id']?.toString()),
-      ].where((id) => id != null && id.isNotEmpty).toSet().toList();
-
+  ...speakingResults.map((e) => e['user_id']?.toString()),
+  ...readingResults.map((e) => e['user_id']?.toString()),
+  ...writingTestResults.map((e) => e['user_id']?.toString()),
+  ...writingPracticeResults.map((e) => e['user_id']?.toString()),
+  ...listeningResults.map((e) => e['user_id']?.toString()),
+].where((id) => id != null && id.isNotEmpty).toSet().toList();
       if (userIds.isEmpty) {
         setState(() {
           users = [];
@@ -120,17 +150,28 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
 
     final userReadingResults =
         readingResults.where((r) => r['user_id'].toString() == userId).toList();
+    final userWritingTests =
+    writingTestResults.where((r) => r['user_id'].toString() == userId).toList();
+
+   final userWritingPractice =
+    writingPracticeResults.where((r) => r['user_id'].toString() == userId).toList();
+
+    final userListeningResults =
+    listeningResults.where((r) => r['user_id'].toString() == userId).toList();
 
     Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AdminUserResultDetailsPage(
-          user: user,
-          speakingResults: userSpeakingResults,
-          readingResults: userReadingResults,
-        ),
-      ),
-    );
+  context,
+  MaterialPageRoute(
+    builder: (_) => AdminUserResultDetailsPage(
+      user: user,
+      speakingResults: userSpeakingResults,
+      readingResults: userReadingResults,
+      writingTestResults: userWritingTests,
+      writingPracticeResults: userWritingPractice,
+      listeningResults: userListeningResults,
+    ),
+  ),
+);
   }
 
   void _showMessage(String message) {
@@ -154,8 +195,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
     final email = user['email']?.toString() ?? '';
     final avatarUrl = user['avatar_url']?.toString();
 
-    final speakingCount = _speakingCountForUser(userId);
-    final readingCount = _readingCountForUser(userId);
+    
     final latestScore = _latestScoreForUser(userId);
 
     final hasAvatar = avatarUrl != null && avatarUrl.trim().isNotEmpty;
@@ -204,15 +244,7 @@ class _AdminResultsPageState extends State<AdminResultsPage> {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: subTextColor),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        "Speaking: $speakingCount  •  Reading: $readingCount",
-                        style: const TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                      ),
+                      
                     ],
                   ),
                 ),
@@ -353,12 +385,18 @@ class AdminUserResultDetailsPage extends StatelessWidget {
   final Map<String, dynamic> user;
   final List<Map<String, dynamic>> speakingResults;
   final List<Map<String, dynamic>> readingResults;
+  final List<Map<String, dynamic>> writingTestResults;
+ final List<Map<String, dynamic>> writingPracticeResults;
+ final List<Map<String, dynamic>> listeningResults;
 
   const AdminUserResultDetailsPage({
     super.key,
     required this.user,
     required this.speakingResults,
     required this.readingResults,
+    required this.writingTestResults,
+    required this.writingPracticeResults,
+    required this.listeningResults,
   });
 
   static const bgColor = Color(0xFFF5F6FA);
@@ -541,17 +579,41 @@ class AdminUserResultDetailsPage extends StatelessWidget {
                   },
                 ),
                 _moduleCard(
-                  icon: Icons.edit,
-                  title: "Writing",
-                  subtitle: "Coming soon",
-                  enabled: false,
-                ),
+  icon: Icons.edit,
+  title: "Writing",
+  subtitle:
+      "${writingTestResults.length + writingPracticeResults.length} results available",
+  enabled: true,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminWritingResultOnlyPage(
+          userName: displayName,
+          writingTestResults: writingTestResults,
+          writingPracticeResults: writingPracticeResults,
+        ),
+      ),
+    );
+  },
+),
                 _moduleCard(
-                  icon: Icons.headphones,
-                  title: "Listening",
-                  subtitle: "Coming soon",
-                  enabled: false,
-                ),
+  icon: Icons.headphones,
+  title: "Listening",
+  subtitle: "${listeningResults.length} results available",
+  enabled: true,
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminListeningResultOnlyPage(
+          userName: displayName,
+          listeningResults: listeningResults,
+        ),
+      ),
+    );
+  },
+),
               ],
             ),
           ),
@@ -561,7 +623,7 @@ class AdminUserResultDetailsPage extends StatelessWidget {
   }
 }
 
-class AdminSpeakingResultOnlyPage extends StatelessWidget {
+class AdminSpeakingResultOnlyPage extends StatefulWidget {
   final String userName;
   final List<Map<String, dynamic>> speakingResults;
 
@@ -571,16 +633,94 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
     required this.speakingResults,
   });
 
+  @override
+  State<AdminSpeakingResultOnlyPage> createState() =>
+      _AdminSpeakingResultOnlyPageState();
+}
+
+class _AdminSpeakingResultOnlyPageState
+    extends State<AdminSpeakingResultOnlyPage> {
+  final supabase = Supabase.instance.client;
+
+  late List<Map<String, dynamic>> speakingResults;
+
   static const bgColor = Color(0xFFF5F6FA);
   static const primaryColor = Color(0xFFFF3B30);
   static const lightPrimary = Color(0xFFFFE8E6);
   static const textColor = Color(0xFF202124);
   static const subTextColor = Color(0xFF6B7280);
 
+  @override
+  void initState() {
+    super.initState();
+    speakingResults = List.from(widget.speakingResults);
+  }
+
   String _safeText(dynamic value) {
     if (value == null) return "N/A";
     if (value.toString().trim().isEmpty) return "N/A";
     return value.toString();
+  }
+
+  Future<bool> _confirmDelete({
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    return result == true;
+  }
+
+  Future<void> _deleteSpeakingResult(String id) async {
+    final confirm = await _confirmDelete(
+      title: "Delete Speaking Result?",
+      message: "This speaking result will be permanently deleted.",
+    );
+
+    if (!confirm) return;
+
+    await supabase.from('speaking_results').delete().eq('id', id);
+
+    setState(() {
+      speakingResults.removeWhere((e) => e['id'] == id);
+    });
+  }
+
+  Future<void> _deleteAllSpeakingResults() async {
+    final confirm = await _confirmDelete(
+      title: "Delete All Speaking Results?",
+      message: "All speaking results of this user will be permanently deleted.",
+    );
+
+    if (!confirm) return;
+
+    for (final item in speakingResults) {
+      await supabase.from('speaking_results').delete().eq('id', item['id']);
+    }
+
+    setState(() {
+      speakingResults.clear();
+    });
   }
 
   Widget _smallScoreBox(String title, String value) {
@@ -651,6 +791,10 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
                 date,
                 style: const TextStyle(color: subTextColor, fontSize: 12),
               ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: primaryColor),
+                onPressed: () => _deleteSpeakingResult(item['id']),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -702,38 +846,6 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final double contentWidth =
-        (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0);
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: textColor),
-        title: Text(
-          "$userName Speaking Results",
-          style: const TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Center(
-          child: SizedBox(
-            width: contentWidth,
-            child: speakingResults.isEmpty
-                ? _emptyBox("No speaking results found", Icons.mic_none)
-                : Column(
-                    children: speakingResults.map(_speakingResultCard).toList(),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _emptyBox(String title, IconData icon) {
     return Container(
       width: double.infinity,
@@ -759,9 +871,48 @@ class AdminSpeakingResultOnlyPage extends StatelessWidget {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final double contentWidth =
+        (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0);
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: textColor),
+        title: Text(
+          "${widget.userName} Speaking Results",
+          style: const TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          if (speakingResults.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: primaryColor),
+              onPressed: _deleteAllSpeakingResults,
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
+        child: Center(
+          child: SizedBox(
+            width: contentWidth,
+            child: speakingResults.isEmpty
+                ? _emptyBox("No speaking results found", Icons.mic_none)
+                : Column(
+                    children: speakingResults.map(_speakingResultCard).toList(),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class AdminReadingResultOnlyPage extends StatelessWidget {
+class AdminReadingResultOnlyPage extends StatefulWidget {
   final String userName;
   final List<Map<String, dynamic>> readingResults;
 
@@ -771,16 +922,94 @@ class AdminReadingResultOnlyPage extends StatelessWidget {
     required this.readingResults,
   });
 
+  @override
+  State<AdminReadingResultOnlyPage> createState() =>
+      _AdminReadingResultOnlyPageState();
+}
+
+class _AdminReadingResultOnlyPageState
+    extends State<AdminReadingResultOnlyPage> {
+  final supabase = Supabase.instance.client;
+
+  late List<Map<String, dynamic>> readingResults;
+
   static const bgColor = Color(0xFFF5F6FA);
   static const primaryColor = Color(0xFFFF3B30);
   static const lightPrimary = Color(0xFFFFE8E6);
   static const textColor = Color(0xFF202124);
   static const subTextColor = Color(0xFF6B7280);
 
+  @override
+  void initState() {
+    super.initState();
+    readingResults = List.from(widget.readingResults);
+  }
+
   String _safeText(dynamic value) {
     if (value == null) return "N/A";
     if (value.toString().trim().isEmpty) return "N/A";
     return value.toString();
+  }
+
+  Future<bool> _confirmDelete({
+    required String title,
+    required String message,
+  }) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    return result == true;
+  }
+
+  Future<void> _deleteReadingResult(String id) async {
+    final confirm = await _confirmDelete(
+      title: "Delete Reading Result?",
+      message: "This reading result will be permanently deleted.",
+    );
+
+    if (!confirm) return;
+
+    await supabase.from('reading_scores').delete().eq('id', id);
+
+    setState(() {
+      readingResults.removeWhere((e) => e['id'] == id);
+    });
+  }
+
+  Future<void> _deleteAllReadingResults() async {
+    final confirm = await _confirmDelete(
+      title: "Delete All Reading Results?",
+      message: "All reading results of this user will be permanently deleted.",
+    );
+
+    if (!confirm) return;
+
+    for (final item in readingResults) {
+      await supabase.from('reading_scores').delete().eq('id', item['id']);
+    }
+
+    setState(() {
+      readingResults.clear();
+    });
   }
 
   Widget _readingResultCard(Map<String, dynamic> item) {
@@ -830,6 +1059,10 @@ class AdminReadingResultOnlyPage extends StatelessWidget {
                 date,
                 style: const TextStyle(color: subTextColor, fontSize: 12),
               ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: primaryColor),
+                onPressed: () => _deleteReadingResult(item['id']),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -864,38 +1097,6 @@ class AdminReadingResultOnlyPage extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final double contentWidth =
-        (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0);
-
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: textColor),
-        title: Text(
-          "$userName Reading Results",
-          style: const TextStyle(color: textColor, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18),
-        child: Center(
-          child: SizedBox(
-            width: contentWidth,
-            child: readingResults.isEmpty
-                ? _emptyBox("No reading results found", Icons.menu_book)
-                : Column(
-                    children: readingResults.map(_readingResultCard).toList(),
-                  ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _emptyBox(String title, IconData icon) {
     return Container(
       width: double.infinity,
@@ -918,6 +1119,463 @@ class AdminReadingResultOnlyPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double contentWidth =
+        (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0);
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: textColor),
+        title: Text(
+          "${widget.userName} Reading Results",
+          style: const TextStyle(color: textColor, fontWeight: FontWeight.bold),
+        ),
+        actions: [
+          if (readingResults.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: primaryColor),
+              onPressed: _deleteAllReadingResults,
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
+        child: Center(
+          child: SizedBox(
+            width: contentWidth,
+            child: readingResults.isEmpty
+                ? _emptyBox("No reading results found", Icons.menu_book)
+                : Column(
+                    children: readingResults.map(_readingResultCard).toList(),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AdminWritingResultOnlyPage extends StatefulWidget {
+  final String userName;
+  final List<Map<String, dynamic>> writingTestResults;
+  final List<Map<String, dynamic>> writingPracticeResults;
+
+  const AdminWritingResultOnlyPage({
+    super.key,
+    required this.userName,
+    required this.writingTestResults,
+    required this.writingPracticeResults,
+  });
+
+  @override
+  State<AdminWritingResultOnlyPage> createState() =>
+      _AdminWritingResultOnlyPageState();
+}
+
+class _AdminWritingResultOnlyPageState extends State<AdminWritingResultOnlyPage> {
+  final supabase = Supabase.instance.client;
+  Future<bool> _confirmDelete({
+  required String title,
+  required String message,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text("Delete"),
+        ),
+      ],
+    ),
+  );
+
+  return result == true;
+}
+
+  late List<Map<String, dynamic>> testResults;
+  late List<Map<String, dynamic>> practiceResults;
+
+  static const bgColor = Color(0xFFF5F6FA);
+  static const primaryColor = Color(0xFFFF3B30);
+  static const lightPrimary = Color(0xFFFFE8E6);
+  static const textColor = Color(0xFF202124);
+  static const subTextColor = Color(0xFF6B7280);
+
+  @override
+  void initState() {
+    super.initState();
+    testResults = List.from(widget.writingTestResults);
+    practiceResults = List.from(widget.writingPracticeResults);
+  }
+
+  String _safe(dynamic v) =>
+      v == null || v.toString().trim().isEmpty ? "N/A" : v.toString();
+
+  Future<void> _deleteTestResult(String id) async {
+  final confirm = await _confirmDelete(
+    title: "Delete Writing Test Result?",
+    message: "This full writing test result will be permanently deleted.",
+  );
+
+  if (!confirm) return;
+
+  await supabase.from('writing_test_results').delete().eq('id', id);
+  setState(() => testResults.removeWhere((e) => e['id'] == id));
+}
+
+  Future<void> _deletePracticeResult(String id) async {
+  final confirm = await _confirmDelete(
+    title: "Delete Writing Practice Result?",
+    message: "This writing practice result will be permanently deleted.",
+  );
+
+  if (!confirm) return;
+
+  await supabase.from('writing_practice_results').delete().eq('id', id);
+  setState(() => practiceResults.removeWhere((e) => e['id'] == id));
+}
+
+Future<void> _deleteAllWritingResults() async {
+  final confirm = await _confirmDelete(
+    title: "Delete All Writing Results?",
+    message: "All writing results of this user will be permanently deleted.",
+  );
+
+  if (!confirm) return;
+
+  for (final item in testResults) {
+    await supabase.from('writing_test_results').delete().eq('id', item['id']);
+  }
+
+  for (final item in practiceResults) {
+    await supabase.from('writing_practice_results').delete().eq('id', item['id']);
+  }
+
+  setState(() {
+    testResults.clear();
+    practiceResults.clear();
+  });
+}
+  Widget _resultCard({
+    required String title,
+    required String date,
+    required String score,
+    required String question,
+    required String answer,
+    required VoidCallback onDelete,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: lightPrimary,
+                child: Text(score,
+                    style: const TextStyle(
+                        color: primaryColor, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(title,
+                    style: const TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: primaryColor),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+          Text(date, style: const TextStyle(color: subTextColor, fontSize: 12)),
+          const SizedBox(height: 12),
+          const Text("Question",
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(question, style: const TextStyle(color: subTextColor, height: 1.5)),
+          const SizedBox(height: 12),
+          const Text("User Answer",
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 6),
+          Text(answer, style: const TextStyle(color: subTextColor, height: 1.5)),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final total = testResults.length + practiceResults.length;
+
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: textColor),
+        title: Text("${widget.userName} Writing Results",
+            style: const TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        actions: [
+          if (total > 0)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: primaryColor),
+              onPressed: _deleteAllWritingResults,
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
+        child: Center(
+          child: SizedBox(
+            width: (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0),
+            child: total == 0
+                ? const Text("No writing results found")
+                : Column(
+                    children: [
+                      ...testResults.map((item) {
+                        final date =
+                            item['created_at']?.toString().split('T').first ?? '';
+                        return Column(
+                          children: [
+                            _resultCard(
+                              title: "Writing Full Test - Task 1",
+                              date: date,
+                              score: _safe(item['task1_band_score']),
+                              question: _safe(item['task1_question']?['question_text']),
+                              answer: _safe(item['task1_answer']),
+                              onDelete: () => _deleteTestResult(item['id']),
+                            ),
+                            _resultCard(
+                              title: "Writing Full Test - Task 2",
+                              date: date,
+                              score: _safe(item['task2_band_score']),
+                              question: _safe(item['task2_question']?['question_text']),
+                              answer: _safe(item['task2_answer']),
+                              onDelete: () => _deleteTestResult(item['id']),
+                            ),
+                          ],
+                        );
+                      }),
+                      ...practiceResults.map((item) {
+                        final date =
+                            item['created_at']?.toString().split('T').first ?? '';
+                        return _resultCard(
+                          title: "Writing Practice - ${_safe(item['task_type'])}",
+                          date: date,
+                          score: _safe(item['band_score']),
+                          question: _safe(item['question_text']),
+                          answer: _safe(item['answer']),
+                          onDelete: () => _deletePracticeResult(item['id']),
+                        );
+                      }),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AdminListeningResultOnlyPage extends StatefulWidget {
+  final String userName;
+  final List<Map<String, dynamic>> listeningResults;
+
+  const AdminListeningResultOnlyPage({
+    super.key,
+    required this.userName,
+    required this.listeningResults,
+  });
+
+  @override
+  State<AdminListeningResultOnlyPage> createState() =>
+      _AdminListeningResultOnlyPageState();
+}
+
+class _AdminListeningResultOnlyPageState
+    extends State<AdminListeningResultOnlyPage> {
+  final supabase = Supabase.instance.client;
+  Future<bool> _confirmDelete({
+  required String title,
+  required String message,
+}) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text("Cancel"),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: primaryColor,
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text("Delete"),
+        ),
+      ],
+    ),
+  );
+
+  return result == true;
+}
+
+  late List<Map<String, dynamic>> results;
+
+  static const bgColor = Color(0xFFF5F6FA);
+  static const primaryColor = Color(0xFFFF3B30);
+  static const lightPrimary = Color(0xFFFFE8E6);
+  static const textColor = Color(0xFF202124);
+  static const subTextColor = Color(0xFF6B7280);
+
+  @override
+  void initState() {
+    super.initState();
+    results = List.from(widget.listeningResults);
+  }
+
+  String _safe(dynamic v) =>
+      v == null || v.toString().trim().isEmpty ? "N/A" : v.toString();
+
+  Future<void> _deleteListeningResult(String id) async {
+  final confirm = await _confirmDelete(
+    title: "Delete Listening Result?",
+    message: "This listening result will be permanently deleted.",
+  );
+
+  if (!confirm) return;
+
+  await supabase.from('user_listening_attempts').delete().eq('id', id);
+  setState(() => results.removeWhere((e) => e['id'] == id));
+}
+
+Future<void> _deleteAllListeningResults() async {
+  final confirm = await _confirmDelete(
+    title: "Delete All Listening Results?",
+    message: "All listening results of this user will be permanently deleted.",
+  );
+
+  if (!confirm) return;
+
+  for (final item in results) {
+    await supabase.from('user_listening_attempts').delete().eq('id', item['id']);
+  }
+
+  setState(() => results.clear());
+}
+
+  Widget _listeningCard(Map<String, dynamic> item) {
+    final testName = item['listening_tests']?['title'] ?? "Listening Test";
+    final score = _safe(item['score']);
+    final total = _safe(item['total']);
+    final band = _safe(item['band_score']);
+    final date = item['created_at']?.toString().split('T').first ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: lightPrimary,
+            child: Text(band,
+                style: const TextStyle(
+                    color: primaryColor, fontWeight: FontWeight.bold)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_safe(testName),
+                    style: const TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16)),
+                const SizedBox(height: 6),
+                Text("Score: $score / $total",
+                    style: const TextStyle(color: subTextColor)),
+                const SizedBox(height: 4),
+                Text(date,
+                    style: const TextStyle(color: subTextColor, fontSize: 12)),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: primaryColor),
+            onPressed: () => _deleteListeningResult(item['id']),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        backgroundColor: bgColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: textColor),
+        title: Text("${widget.userName} Listening Results",
+            style: const TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        actions: [
+          if (results.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: primaryColor),
+              onPressed: _deleteAllListeningResults,
+            ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(18),
+        child: Center(
+          child: SizedBox(
+            width: (MediaQuery.of(context).size.width * 0.35).clamp(300.0, 560.0),
+            child: results.isEmpty
+                ? const Text("No listening results found")
+                : Column(children: results.map(_listeningCard).toList()),
+          ),
+        ),
       ),
     );
   }
