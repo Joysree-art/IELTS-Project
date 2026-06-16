@@ -101,6 +101,7 @@ class _RegisterPageState extends State<RegisterPage> {
         emailRedirectTo: 'http://localhost:3000',
         data: {
           'full_name': nameController.text.trim(),
+          'email': emailController.text.trim().toLowerCase(),
           'phone': '',
         },
       );
@@ -109,12 +110,12 @@ class _RegisterPageState extends State<RegisterPage> {
 
       if (response.user != null) {
         showMessage(
-         "Confirmation email sent. Please verify your email, then login.",
+          "Confirmation email sent. Please verify your email, then login.",
         );
 
         Navigator.pushReplacement(
-         context,
-         MaterialPageRoute(builder: (context) => const LoginPage()),
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
         );
       }
     } catch (e) {
@@ -264,8 +265,7 @@ class _RegisterPageState extends State<RegisterPage> {
           builder: (context, constraints) {
             final screenWidth = constraints.maxWidth;
 
-            final double cardWidth =
-                (screenWidth * 0.35).clamp(300.0, 500.0);
+            final double cardWidth = (screenWidth * 0.35).clamp(300.0, 500.0);
 
             final bool isSmallScreen = screenWidth <= 320;
 

@@ -150,7 +150,7 @@ class _WritingAnswerPageState extends State<WritingAnswerPage> {
     final tips = feedbackData?['improvement_tips'];
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF7F9),
+      backgroundColor: const Color(0xFFFFF7F7),
       appBar: AppBar(
         title: Text(widget.title),
         backgroundColor: Colors.red,

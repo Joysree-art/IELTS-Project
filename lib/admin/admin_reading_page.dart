@@ -900,7 +900,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       backgroundColor: const Color(0xFFFDF7F9),
       appBar: AppBar(
         title: const Text('Admin Reading Page'),
-        backgroundColor: const Color(0xFFDB2777),
+        backgroundColor: Color(0xFFB91C1C),
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -962,7 +962,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                         ? 'Save Passage'
                         : 'Update Passage'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDB2777),
+                      backgroundColor: Color(0xFFB91C1C),
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -1061,7 +1061,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                     icon: const Icon(Icons.add),
                     label: const Text('Add Manual Question'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFDB2777),
+                      backgroundColor: Color(0xFFB91C1C),
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -1076,7 +1076,9 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
             Container(
               color: Colors.black.withOpacity(0.15),
               child: const Center(
-                child: CircularProgressIndicator(color: Color(0xFFDB2777)),
+                child: CircularProgressIndicator(
+                  color: Color(0xFFB91C1C),
+                ),
               ),
             ),
         ],
