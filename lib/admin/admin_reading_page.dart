@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/groq_service.dart';
 
@@ -11,6 +12,13 @@ class AdminReadingPage extends StatefulWidget {
 
 class _AdminReadingPageState extends State<AdminReadingPage> {
   final supabase = Supabase.instance.client;
+
+  static const Color primaryRed = Color(0xFFF44336);
+  static const Color pageBackground = Color(0xFFFFF7FA);
+  static const Color cardBackground = Color(0xFFFAF6FF);
+  static const Color neutralBorder = Color(0xFFE7DDE7);
+  static const Color textDark = Color(0xFF24212A);
+  static const Color textGrey = Color(0xFF8B8790);
 
   final titleController = TextEditingController();
   final passageController = TextEditingController();
@@ -33,7 +41,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
   List<Map<String, dynamic>> generatedQuestions = [];
   List<Map<String, dynamic>> savedQuestions = [];
   List<Map<String, dynamic>> savedPassages = [];
-  bool isEditMode = false;
 
   final questionTypes = const [
     'MCQ',
@@ -46,6 +53,17 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
   @override
   void initState() {
     super.initState();
+
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: primaryRed,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: pageBackground,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     _fetchSavedPassages();
   }
 
@@ -322,7 +340,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       passageController.text = passage['passage_text']?.toString() ?? '';
       sourceController.text = passage['source']?.toString() ?? 'Admin / AI';
       difficulty = passage['difficulty']?.toString() ?? 'medium';
-      isEditMode = true;
     });
 
     await _fetchSavedQuestions();
@@ -412,7 +429,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -449,7 +466,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(backgroundColor: primaryRed),
             child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -494,7 +511,6 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
         sourceController.text = 'Admin / AI';
         savedPassageId = null;
         savedQuestions.clear();
-        isEditMode = false;
       }
 
       final updatedPassages = await supabase
@@ -524,11 +540,27 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       child: TextField(
         controller: controller,
         maxLines: maxLines,
+        cursorColor: primaryRed,
         decoration: InputDecoration(
           labelText: label,
+          labelStyle: const TextStyle(color: textGrey),
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: neutralBorder),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: primaryRed, width: 1.5),
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
         ),
       ),
     );
@@ -539,7 +571,11 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
       padding: const EdgeInsets.only(top: 18, bottom: 12),
       child: Text(
         text,
-        style: const TextStyle(fontSize: 21, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          color: textDark,
+          fontSize: 21,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -559,6 +595,12 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
         final options = q['options'];
 
         return Card(
+          color: cardBackground,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: neutralBorder),
+          ),
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
             padding: const EdgeInsets.all(14),
@@ -605,6 +647,12 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     return Column(
       children: savedPassages.map((p) {
         return Card(
+          color: cardBackground,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: neutralBorder),
+          ),
           child: ListTile(
             title: Text(p['title']?.toString() ?? ''),
             subtitle: Text('Difficulty: ${p['difficulty'] ?? ''}'),
@@ -614,7 +662,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                 IconButton(
                   icon: const Icon(
                     Icons.delete_outline,
-                    color: Colors.red,
+                    color: primaryRed,
                   ),
                   onPressed: () => _deletePassage(
                     p['id'].toString(),
@@ -835,6 +883,12 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     return Column(
       children: savedQuestions.map((q) {
         return Card(
+          color: cardBackground,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: neutralBorder),
+          ),
           child: ListTile(
             title: Text(q['question_text']?.toString() ?? ''),
             subtitle: Text(
@@ -853,7 +907,7 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                 IconButton(
                   icon: const Icon(
                     Icons.delete_outline,
-                    color: Colors.red,
+                    color: primaryRed,
                   ),
                   onPressed: () => _deleteQuestion(
                     q['id'].toString(),
@@ -897,10 +951,16 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
     final showOptions = _hasOptions(questionType);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF7F9),
+      backgroundColor: pageBackground,
       appBar: AppBar(
-        title: const Text('Admin Reading Page'),
-        backgroundColor: Color(0xFFB91C1C),
+        title: const Text(
+          'Admin Reading Page',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: primaryRed,
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -930,11 +990,23 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                 _field(passageController, 'Passage Text', maxLines: 9),
                 DropdownButtonFormField<String>(
                   value: difficulty,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Difficulty',
+                    labelStyle: const TextStyle(color: textGrey),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: neutralBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide:
+                          const BorderSide(color: primaryRed, width: 1.5),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   items: const [
                     DropdownMenuItem(value: 'easy', child: Text('Easy')),
@@ -962,8 +1034,11 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                         ? 'Save Passage'
                         : 'Update Passage'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFB91C1C),
+                      backgroundColor: primaryRed,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -976,8 +1051,11 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                         icon: const Icon(Icons.auto_awesome),
                         label: const Text('Generate AI'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF111827),
+                          backgroundColor: primaryRed,
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -990,6 +1068,9 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
                         ),
                       ),
                     ),
@@ -1001,11 +1082,23 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                 _field(questionController, 'Question Text', maxLines: 3),
                 DropdownButtonFormField<String>(
                   value: questionType,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Question Type',
+                    labelStyle: const TextStyle(color: textGrey),
                     filled: true,
                     fillColor: Colors.white,
-                    border: OutlineInputBorder(),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: neutralBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide:
+                          const BorderSide(color: primaryRed, width: 1.5),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
                   ),
                   items: questionTypes
                       .map(
@@ -1025,11 +1118,23 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                     value: answerController.text.isEmpty
                         ? null
                         : answerController.text,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Correct Answer',
+                      labelStyle: const TextStyle(color: textGrey),
                       filled: true,
                       fillColor: Colors.white,
-                      border: OutlineInputBorder(),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide: const BorderSide(color: neutralBorder),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                        borderSide:
+                            const BorderSide(color: primaryRed, width: 1.5),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                     items: const [
                       DropdownMenuItem(value: 'True', child: Text('True')),
@@ -1061,8 +1166,11 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
                     icon: const Icon(Icons.add),
                     label: const Text('Add Manual Question'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFB91C1C),
+                      backgroundColor: primaryRed,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
                     ),
                   ),
                 ),
@@ -1074,10 +1182,10 @@ class _AdminReadingPageState extends State<AdminReadingPage> {
           ),
           if (isLoading)
             Container(
-              color: Colors.black.withOpacity(0.15),
+              color: const Color(0x14F44336),
               child: const Center(
                 child: CircularProgressIndicator(
-                  color: Color(0xFFB91C1C),
+                  color: primaryRed,
                 ),
               ),
             ),

@@ -88,12 +88,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
       final speaking = <double>[];
       final listening = <double>[];
 
-      for (final row in rows) {
-        final item = row as Map<String, dynamic>;
+      for (final item in rows) {
         final module = (item['module'] ?? '').toString().trim().toLowerCase();
         final score = _toScore(item['band_score']);
 
-        // 0 is a valid latest score. Only invalid or out-of-range scores are skipped.
         if (score == null || score < 0 || score > 9) continue;
 
         if (module.contains('reading')) {
@@ -407,7 +405,7 @@ class _GradientCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: colors.first.withOpacity(0.25),
+            color: colors.first.withAlpha(64),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -443,7 +441,7 @@ class _GradientCard extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.95),
+              color: const Color(0xF2FFFFFF),
               fontSize: isPhone ? 13 : 15,
               height: 1.25,
             ),
@@ -479,7 +477,7 @@ class _ChartCard extends StatelessWidget {
         border: Border.all(color: const Color(0xFFFFD9DE)),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.04),
+            color: const Color(0x0AF44336),
             blurRadius: 14,
             offset: const Offset(0, 6),
           ),

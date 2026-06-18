@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'home_page.dart';
@@ -21,12 +22,13 @@ class ReadingPage extends StatefulWidget {
 class _ReadingPageState extends State<ReadingPage> {
   final supabase = Supabase.instance.client;
 
-  static const Color primaryRed = Color(0xFFDC2626);
-  static const Color darkRed = Color(0xFFB91C1C);
-  static const Color pageBackground = Colors.white;
-  static const Color cardBackground = Colors.white;
-  static const Color softBackground = Color(0xFFF9FAFB);
-  static const Color neutralBorder = Color(0xFFE5E7EB);
+  static const Color primaryRed = Color(0xFFF44336);
+  static const Color pageBackground = Color(0xFFFFF7FA);
+  static const Color cardBackground = Color(0xFFFAF6FF);
+  static const Color softRed = Color(0xFFFFCDD2);
+  static const Color softBackground = Color(0xFFFFF1F3);
+  static const Color neutralBorder = Color(0xFFE7DDE7);
+  static const Color textDark = Color(0xFF24212A);
 
   bool isLoading = true;
   bool submitted = false;
@@ -53,6 +55,17 @@ class _ReadingPageState extends State<ReadingPage> {
   @override
   void initState() {
     super.initState();
+
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: primaryRed,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: pageBackground,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     _fetchReadingTest();
     _startTimer();
   }
@@ -266,6 +279,7 @@ class _ReadingPageState extends State<ReadingPage> {
         'insight': _aiInsight(percentage),
         'created_at': DateTime.now().toIso8601String(),
       });
+
       await supabase.from('ielts_scores').insert({
         'user_id': userId,
         'module': 'reading',
@@ -300,7 +314,6 @@ class _ReadingPageState extends State<ReadingPage> {
   @override
   void dispose() {
     countdownTimer?.cancel();
-
     super.dispose();
   }
 
@@ -327,179 +340,197 @@ class _ReadingPageState extends State<ReadingPage> {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: pageBackground,
         body: Center(
-          child: CircularProgressIndicator(
-            color: Color(0xFFDC2626),
-          ),
+          child: CircularProgressIndicator(color: primaryRed),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildProgressBar(),
-            Expanded(
-              child: RefreshIndicator(
-                color: Color(0xFFDC2626),
-                onRefresh: _fetchReadingTest,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
+      backgroundColor: pageBackground,
+      appBar: AppBar(
+        backgroundColor: primaryRed,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          currentPracticeType == null ? 'IELTS Reading' : currentTitle,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          if (currentPracticeType != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.18),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
                     children: [
-                      _buildModeSelector(),
-                      const SizedBox(height: 16),
-                      if (currentPracticeType != null) _buildPassageCard(),
-                      if (currentPracticeType != null)
-                        const SizedBox(height: 20),
-                      if (currentPracticeType == null)
-                        const Padding(
-                          padding: EdgeInsets.only(top: 30),
-                          child: Text(
-                            'Select a practice mode to start.',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                      const Icon(
+                        Icons.timer_outlined,
+                        color: Colors.white,
+                        size: 17,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        _formatTime(duration),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
                         ),
-                      if (currentPracticeType != null)
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Questions (${questions.length})',
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      if (currentPracticeType != null)
-                        const SizedBox(height: 15),
-                      if (currentPracticeType != null && questions.isEmpty)
-                        const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Text(
-                            'No questions found for this practice mode.',
-                            style: TextStyle(color: Colors.grey),
-                          ),
-                        )
-                      else if (currentPracticeType != null)
-                        ...List.generate(
-                          questions.length,
-                          (index) => _buildQuestionCard(index),
-                        ),
-                      const SizedBox(height: 20),
-                      if (currentPracticeType != null && questions.isNotEmpty)
-                        _buildSubmitButton(),
-                      if (submitted) _buildAnalyticsCard(),
-                      const SizedBox(height: 80),
+                      ),
                     ],
                   ),
                 ),
               ),
             ),
-          ],
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        child: RefreshIndicator(
+          color: primaryRed,
+          onRefresh: _fetchReadingTest,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                _buildModeSelector(),
+                if (currentPracticeType != null) ...[
+                  const SizedBox(height: 12),
+                  _buildProgressBar(),
+                  const SizedBox(height: 16),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildPassageCard(),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Questions (${questions.length})',
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: textDark,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+                  if (questions.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.all(20),
+                      child: Text(
+                        'No questions found for this practice mode.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    )
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Column(
+                        children: List.generate(
+                          questions.length,
+                          (index) => _buildQuestionCard(index),
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 20),
+                  if (questions.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildSubmitButton(),
+                    ),
+                  if (submitted)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: _buildAnalyticsCard(),
+                    ),
+                ] else
+                  const Padding(
+                    padding: EdgeInsets.only(top: 24),
+                    child: Text(
+                      'Select a practice mode to start.',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 80),
+              ],
+            ),
+          ),
         ),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Row(
-        children: [
-          InkWell(
-            onTap: () {
-              Navigator.pop(context);
-            },
-            borderRadius: BorderRadius.circular(30),
-            child: const CircleAvatar(
-              backgroundColor: cardBackground,
-              child: Icon(Icons.arrow_back, color: Color(0xFFDC2626)),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  currentTitle,
-                  style: const TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  currentPracticeType == null
-                      ? 'Choose a practice mode'
-                      : passageTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: pageBackground,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.timer_outlined, color: Colors.red, size: 18),
-                const SizedBox(width: 5),
-                Text(
-                  _formatTime(duration),
-                  style: const TextStyle(
-                    color: Colors.red,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProgressBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            currentPracticeType == null
-                ? 'Progress: 0/0'
-                : 'Progress: $answeredCount/${questions.length}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.grey,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: neutralBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Progress: $answeredCount/${questions.length}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: textDark,
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: primaryRed,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: LinearProgressIndicator(
-              value: currentPracticeType == null ? 0 : progress,
-              minHeight: 8,
-              backgroundColor: neutralBorder,
-              valueColor: const AlwaysStoppedAnimation(Color(0xFFDC2626)),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 8,
+                backgroundColor: softRed,
+                valueColor: const AlwaysStoppedAnimation(primaryRed),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -508,14 +539,21 @@ class _ReadingPageState extends State<ReadingPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Choose Practice Mode',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Choose Practice Mode',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: textDark,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         _modeCard(
           title: 'Full Mixed Test',
           subtitle: 'MCQ + Fill Blank + True/False',
@@ -572,43 +610,63 @@ class _ReadingPageState extends State<ReadingPage> {
     required VoidCallback onTap,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 22),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
+            color: active ? softBackground : cardBackground,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: active ? primaryRed : neutralBorder,
-              width: active ? 2 : 1,
+              color: active ? primaryRed.withOpacity(0.55) : neutralBorder,
+              width: active ? 1.4 : 1,
             ),
           ),
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: primaryRed,
+                radius: 28,
+                backgroundColor: softRed,
                 child: Icon(
                   icon,
-                  color: Colors.white,
+                  color: primaryRed,
+                  size: 26,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(subtitle,
-                        style:
-                            const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: textDark,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              if (active) const Icon(Icons.check_circle, color: primaryRed),
+              if (active)
+                const Icon(
+                  Icons.check_circle,
+                  color: primaryRed,
+                  size: 23,
+                ),
             ],
           ),
         ),
@@ -625,45 +683,87 @@ class _ReadingPageState extends State<ReadingPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF111827),
-        borderRadius: BorderRadius.circular(24),
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: neutralBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            passageTitle,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (difficulty.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              difficulty.toUpperCase(),
-              style: const TextStyle(
-                color: Color(0xFFDC2626),
-                fontWeight: FontWeight.bold,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CircleAvatar(
+                radius: 28,
+                backgroundColor: softRed,
+                child: Icon(
+                  Icons.menu_book_rounded,
+                  color: primaryRed,
+                  size: 26,
+                ),
               ),
-            ),
-          ],
-          const SizedBox(height: 10),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      passageTitle,
+                      style: const TextStyle(
+                        color: textDark,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (difficulty.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: softRed,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          difficulty.toUpperCase(),
+                          style: const TextStyle(
+                            color: primaryRed,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Text(
             preview,
-            style: const TextStyle(color: Colors.white70, height: 1.5),
+            style: const TextStyle(
+              color: Colors.black87,
+              height: 1.5,
+              fontSize: 15,
+            ),
           ),
           const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
+            height: 50,
             child: ElevatedButton.icon(
               onPressed: _showFullPassage,
               icon: const Icon(Icons.visibility),
               label: const Text('View Passage'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1F2937),
+                backgroundColor: primaryRed,
                 foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
               ),
             ),
           ),
@@ -720,8 +820,8 @@ class _ReadingPageState extends State<ReadingPage> {
       margin: const EdgeInsets.only(bottom: 18),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: neutralBorder),
       ),
       child: Column(
@@ -730,11 +830,12 @@ class _ReadingPageState extends State<ReadingPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CircleAvatar(
-                backgroundColor: primaryRed,
+                radius: 24,
+                backgroundColor: softRed,
                 child: Text(
                   '${index + 1}',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: primaryRed,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -744,8 +845,9 @@ class _ReadingPageState extends State<ReadingPage> {
                 child: Text(
                   question['question_text']?.toString() ?? '',
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 17,
                     fontWeight: FontWeight.w600,
+                    color: textDark,
                     height: 1.4,
                   ),
                 ),
@@ -776,15 +878,15 @@ class _ReadingPageState extends State<ReadingPage> {
               margin: const EdgeInsets.only(left: 56),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: primaryRed),
+                color: softRed,
+                borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 question['question_type']?.toString() ?? '',
                 style: const TextStyle(
                   color: primaryRed,
                   fontWeight: FontWeight.w600,
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -1036,19 +1138,30 @@ class _ReadingPageState extends State<ReadingPage> {
       margin: const EdgeInsets.only(top: 20),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(24),
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: neutralBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Reading Analytics',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 21,
-              fontWeight: FontWeight.bold,
-            ),
+          const Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: softRed,
+                child: Icon(Icons.bar_chart, color: primaryRed),
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Reading Analytics',
+                style: TextStyle(
+                  color: textDark,
+                  fontSize: 21,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           Row(
@@ -1064,7 +1177,7 @@ class _ReadingPageState extends State<ReadingPage> {
           const Text(
             'Insight',
             style: TextStyle(
-              color: Color(0xFFDC2626),
+              color: primaryRed,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -1072,7 +1185,7 @@ class _ReadingPageState extends State<ReadingPage> {
           const SizedBox(height: 8),
           Text(
             _aiInsight(percentage),
-            style: const TextStyle(color: Colors.white70, height: 1.5),
+            style: const TextStyle(color: Colors.black87, height: 1.5),
           ),
         ],
       ),
@@ -1084,20 +1197,27 @@ class _ReadingPageState extends State<ReadingPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.circular(18),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: softRed),
         ),
         child: Column(
           children: [
             Text(
               value,
               style: const TextStyle(
-                color: Color(0xFFDC2626),
+                color: primaryRed,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            Text(title, style: const TextStyle(color: Colors.white70)),
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),
@@ -1132,8 +1252,10 @@ class _ReadingPageState extends State<ReadingPage> {
     return BottomNavigationBar(
       currentIndex: 0,
       onTap: _goToPage,
-      selectedItemColor: const Color(0xFFDC2626),
+      backgroundColor: pageBackground,
+      selectedItemColor: primaryRed,
       unselectedItemColor: Colors.grey,
+      elevation: 8,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
         BottomNavigationBarItem(

@@ -257,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Blends IELTS with aspire and inspire',
+                    'Practice smarter. Improve faster. Achieve higher.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -311,7 +311,7 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: redPrimary,
-                        disabledBackgroundColor: redPrimary.withOpacity(0.6),
+                        disabledBackgroundColor: const Color(0x59D62828),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
