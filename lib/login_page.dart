@@ -4,6 +4,7 @@ import 'admin/admin_dashboard.dart';
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,16 +21,87 @@ class _LoginPageState extends State<LoginPage> {
   bool _rememberMe = false;
   bool _isLoading = false;
 
+  String? _rememberedEmail;
+  bool _autoUncheckedRememberMe = false;
+
   SupabaseClient get _supabase => Supabase.instance.client;
 
-  final RegExp _emailRegex = RegExp(r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$');
+  final RegExp _emailRegex = RegExp(
+    r'^[\w\.-]+@([\w-]+\.)+[\w-]{2,}$',
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_handleEmailChange);
+    _loadRememberedEmail();
+  }
+
+  Future<void> _loadRememberedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('remembered_email');
+
+    if (!mounted) return;
+
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      _rememberedEmail = savedEmail.trim().toLowerCase();
+      _emailController.text = savedEmail;
+
+      setState(() {
+        _rememberMe = true;
+      });
+    }
+  }
+
+  void _handleEmailChange() {
+    if (!mounted) return;
+
+    final currentEmail = _emailController.text.trim().toLowerCase();
+
+    if (_rememberedEmail != null &&
+        currentEmail.isNotEmpty &&
+        currentEmail != _rememberedEmail &&
+        _rememberMe) {
+      setState(() {
+        _rememberMe = false;
+        _autoUncheckedRememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveRememberedEmail(String email) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    if (_rememberMe) {
+      await prefs.setString('remembered_email', email);
+      _rememberedEmail = email;
+      _autoUncheckedRememberMe = false;
+    } else {
+      /*
+        If Remember Me was automatically unchecked because user typed
+        another account email, we will NOT overwrite or remove the old
+        remembered email.
+
+        If user manually unticks Remember Me and logs in, then we remove it.
+      */
+      if (!_autoUncheckedRememberMe) {
+        await prefs.remove('remembered_email');
+        _rememberedEmail = null;
+      }
+    }
+  }
 
   Future<void> _login() async {
-    final email = _emailController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty) {
       _showSnackBar('Enter email');
+      return;
+    }
+
+    if (!_emailRegex.hasMatch(email)) {
+      _showSnackBar('Invalid email format');
       return;
     }
 
@@ -38,14 +110,22 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    if (!_emailRegex.hasMatch(email)) {
-      _showSnackBar('Invalid email');
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
+      final profileByEmail = await _supabase
+          .from('profiles')
+          .select('id, email, role')
+          .ilike('email', email)
+          .maybeSingle();
+
+      if (!mounted) return;
+
+      if (profileByEmail == null) {
+        _showSnackBar('Invalid email');
+        return;
+      }
+
       final response = await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
@@ -60,15 +140,9 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
 
-        final profile = await _supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', response.user!.id)
-            .maybeSingle();
+        await _saveRememberedEmail(email);
 
-        if (!mounted) return;
-
-        final role = profile?['role'] ?? 'user';
+        final role = (profileByEmail['role'] ?? 'user').toString();
 
         _showSnackBar('Login successful');
 
@@ -84,28 +158,45 @@ class _LoginPageState extends State<LoginPage> {
       final msg = e.message.toLowerCase();
 
       if (msg.contains('email not confirmed')) {
-       _showSnackBar('Please verify your email before login');
+        _showSnackBar('Please verify your email before login');
       } else if (msg.contains('invalid login credentials')) {
-       _showSnackBar('Invalid email or password');
+        _showSnackBar('Invalid password');
       } else {
-      _showSnackBar(e.message);
+        _showSnackBar(e.message);
       }
-    }
-    catch (e) {
-      _showSnackBar('Error: $e');
+    } catch (e) {
+      final errorMessage = e.toString().toLowerCase();
+
+      if (errorMessage.contains('email') &&
+          errorMessage.contains('column') &&
+          errorMessage.contains('does not exist')) {
+        _showSnackBar('profiles table e email column nai');
+      } else {
+        _showSnackBar('Error: $e');
+      }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   void _showSnackBar(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
   void dispose() {
+    _emailController.removeListener(_handleEmailChange);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -116,11 +207,15 @@ class _LoginPageState extends State<LoginPage> {
     const redPrimary = Color(0xFFD62828);
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFF7F7FB),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width < 360 ? 16 : 24,
+              vertical: 24,
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 430),
               child: Column(
@@ -136,7 +231,10 @@ class _LoginPageState extends State<LoginPage> {
                           color: redPrimary,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.menu_book, color: Colors.white),
+                        child: const Icon(
+                          Icons.menu_book,
+                          color: Colors.white,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       const Text(
@@ -152,11 +250,14 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 40),
                   const Text(
                     'Welcome Back',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Blends IELTS with aspire and inspire',
+                    'Practice smarter. Improve faster. Achieve higher.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -165,6 +266,7 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _emailController,
                     hint: 'Email',
                     icon: Icons.email,
+                    keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 20),
                   _inputField(
@@ -190,9 +292,11 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       Checkbox(
                         value: _rememberMe,
+                        activeColor: redPrimary,
                         onChanged: (val) {
                           setState(() {
-                            _rememberMe = val!;
+                            _rememberMe = val ?? false;
+                            _autoUncheckedRememberMe = false;
                           });
                         },
                       ),
@@ -207,12 +311,20 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: redPrimary,
+                        disabledBackgroundColor: const Color(0x59D62828),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
                       child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
                           : const Text(
                               'Login',
                               style: TextStyle(
@@ -261,16 +373,42 @@ class _LoginPageState extends State<LoginPage> {
     required IconData icon,
     bool obscure = false,
     Widget? suffix,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return TextField(
       controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
+      textInputAction:
+          hint == 'Password' ? TextInputAction.done : TextInputAction.next,
+      onSubmitted: (_) {
+        if (hint == 'Password' && !_isLoading) {
+          _login();
+        }
+      },
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon),
         suffixIcon: suffix,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(30),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(color: Color(0xFFE2E2E2)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: const BorderSide(
+            color: Color(0xFFD62828),
+            width: 1.5,
+          ),
         ),
       ),
     );

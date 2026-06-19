@@ -4,7 +4,11 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <application
+<<<<<<< HEAD
         android:label="IELTSync"
+=======
+        android:label="third_year_project"
+>>>>>>> bc3e1dff4f907f6b2940dde786836e795104bfce
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

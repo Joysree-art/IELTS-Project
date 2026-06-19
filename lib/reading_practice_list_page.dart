@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'reading_page.dart';
@@ -14,6 +15,14 @@ class ReadingPracticeListPage extends StatefulWidget {
 class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
   final supabase = Supabase.instance.client;
 
+  static const Color primaryRed = Color(0xFFF44336);
+  static const Color pageBackground = Color(0xFFFFF7FA);
+  static const Color cardBackground = Color(0xFFFAF6FF);
+  static const Color softRed = Color(0xFFFFCDD2);
+  static const Color neutralBorder = Color(0xFFE7DDE7);
+  static const Color textDark = Color(0xFF24212A);
+  static const Color textGrey = Color(0xFF8B8790);
+
   bool isLoading = true;
 
   List<Map<String, dynamic>> passages = [];
@@ -23,6 +32,17 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
   @override
   void initState() {
     super.initState();
+
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: primaryRed,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+        systemNavigationBarColor: pageBackground,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+    );
+
     _loadReadingPractices();
   }
 
@@ -100,11 +120,18 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
     final remaining = total - completed;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDF7F9),
+      backgroundColor: pageBackground,
       appBar: AppBar(
-        title: const Text('Reading Practice'),
-        backgroundColor: const Color(0xFFDB2777),
+        title: const Text(
+          'Reading Practice',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: primaryRed,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: _loadReadingPractices,
@@ -114,24 +141,26 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
       ),
       body: isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFDB2777)),
+              child: CircularProgressIndicator(color: primaryRed),
             )
           : RefreshIndicator(
               onRefresh: _loadReadingPractices,
-              color: const Color(0xFFDB2777),
+              color: primaryRed,
+              backgroundColor: Colors.white,
               child: ListView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 18, 16, 24),
                 children: [
                   _buildSummaryCard(
                     total: total,
                     completed: completed,
                     remaining: remaining,
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 20),
                   const Text(
                     'Available Reading Tests',
                     style: TextStyle(
-                      fontSize: 21,
+                      color: textDark,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -142,7 +171,7 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
                       child: Center(
                         child: Text(
                           'No reading practices available.',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: textGrey),
                         ),
                       ),
                     )
@@ -175,37 +204,48 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFFFCE7F3),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: Colors.pink.shade100),
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: neutralBorder),
       ),
       child: Row(
         children: [
-          _summaryItem('Total', total.toString()),
-          _summaryItem('Completed', completed.toString()),
-          _summaryItem('Left', remaining.toString()),
+          _summaryItem('Total', total.toString(), Icons.library_books),
+          _summaryItem('Completed', completed.toString(), Icons.check_circle),
+          _summaryItem('Left', remaining.toString(), Icons.pending_actions),
         ],
       ),
     );
   }
 
-  Widget _summaryItem(String title, String value) {
+  Widget _summaryItem(String title, String value, IconData icon) {
     return Expanded(
       child: Column(
         children: [
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: softRed,
+            child: Icon(
+              icon,
+              color: primaryRed,
+              size: 22,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              color: Color(0xFFDB2777),
-              fontSize: 25,
+              color: primaryRed,
+              fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             title,
             style: const TextStyle(
-              color: Colors.grey,
+              color: textGrey,
               fontWeight: FontWeight.w600,
+              fontSize: 12,
             ),
           ),
         ],
@@ -230,33 +270,35 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       child: Material(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              color: cardBackground,
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color:
-                    isCompleted ? Colors.green.shade200 : Colors.pink.shade100,
+                color: isCompleted ? Colors.green.shade300 : neutralBorder,
+                width: 1.1,
               ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  backgroundColor: isCompleted
-                      ? Colors.green.shade100
-                      : const Color(0xFFFCE7F3),
+                  radius: 28,
+                  backgroundColor:
+                      isCompleted ? const Color(0xFFDCFCE7) : softRed,
                   child: Icon(
-                    isCompleted ? Icons.check : Icons.menu_book,
-                    color: isCompleted ? Colors.green : const Color(0xFFDB2777),
+                    isCompleted ? Icons.check : Icons.menu_book_rounded,
+                    color: isCompleted ? Colors.green.shade700 : primaryRed,
+                    size: 26,
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,15 +306,16 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
                       Text(
                         'Practice Test $passageNumber',
                         style: const TextStyle(
+                          color: textDark,
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 5),
                       Text(
                         title,
                         style: const TextStyle(
-                          color: Color(0xFF374151),
+                          color: textDark,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -282,7 +325,7 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          color: Colors.grey,
+                          color: textGrey,
                           height: 1.4,
                         ),
                       ),
@@ -293,20 +336,26 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
                         children: [
                           _tag(
                             text: difficulty.toUpperCase(),
-                            color: Colors.orange,
+                            color: Colors.orange.shade800,
+                            borderColor: Colors.orange.shade200,
                             bg: const Color(0xFFFFF7ED),
                           ),
                           _tag(
                             text: '$questionCount Questions',
-                            color: const Color(0xFFDB2777),
-                            bg: const Color(0xFFFCE7F3),
+                            color: primaryRed,
+                            borderColor: softRed,
+                            bg: Colors.white,
                           ),
                           _tag(
                             text: isCompleted ? 'Completed' : 'Not Attempted',
-                            color: isCompleted ? Colors.green : Colors.blueGrey,
+                            color: isCompleted
+                                ? Colors.green.shade800
+                                : primaryRed,
+                            borderColor:
+                                isCompleted ? Colors.green.shade200 : softRed,
                             bg: isCompleted
                                 ? const Color(0xFFDCFCE7)
-                                : const Color(0xFFF1F5F9),
+                                : Colors.white,
                           ),
                         ],
                       ),
@@ -317,7 +366,7 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
                 const Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: Color(0xFFDB2777),
+                  color: primaryRed,
                 ),
               ],
             ),
@@ -330,6 +379,7 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
   Widget _tag({
     required String text,
     required Color color,
+    required Color borderColor,
     required Color bg,
   }) {
     return Container(
@@ -337,6 +387,7 @@ class _ReadingPracticeListPageState extends State<ReadingPracticeListPage> {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1),
       ),
       child: Text(
         text,
