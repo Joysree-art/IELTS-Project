@@ -38,7 +38,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     try {
       final data = await supabase
           .from('profiles')
-          .select('id, full_name, phone, email, role, avatar_url, created_at')
+          .select('id, full_name, phone, email, role, avatar_url, created_at, blocked')
           .order('created_at', ascending: false);
 
       users = List<Map<String, dynamic>>.from(data);
@@ -112,6 +112,47 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     searchController.dispose();
     super.dispose();
   }
+
+  Future<void> _toggleBlockUser(
+    Map<String, dynamic> user) async {
+  final blocked = user['blocked'] ?? false;
+
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(
+          blocked ? 'Unblock User?' : 'Block User?'),
+      content: Text(
+          blocked
+              ? 'Allow this user to use the app again?'
+              : 'This user will no longer be able to use the app.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Confirm'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm != true) return;
+
+  await supabase
+      .from('profiles')
+      .update({
+        'blocked': !blocked,
+      })
+      .eq('id', user['id']);
+
+  fetchUsers();
+
+  _msg(
+      blocked ? 'User unblocked' : 'User blocked');
+}
 
   @override
   Widget build(BuildContext context) {
@@ -290,49 +331,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       },
     );
   }
-  Future<void> deleteUser(Map<String, dynamic> user) async {
-  final userId = user['id'];
-  final name = user['full_name'] ?? 'this user';
-  if ((user['role'] ?? 'user').toString().toLowerCase() == 'admin') {
-  _msg('Admin accounts cannot be deleted');
-  return;
-  }
-
-  if (userId == supabase.auth.currentUser?.id) {
-    _msg("You cannot delete your own admin account");
-    return;
-  }
-
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Delete User'),
-      content: Text('Are you sure you want to remove $name?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx, false),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () => Navigator.pop(ctx, true),
-          child: const Text('Delete', style: TextStyle(color: Colors.white)),
-        ),
-      ],
-    ),
-  );
-
-  if (confirm != true) return;
-
-  try {
-    await supabase.from('profiles').delete().eq('id', userId);
-
-    _msg('User removed');
-    fetchUsers();
-  } catch (e) {
-    _msg('Delete failed: $e');
-  }
-}
 
   Widget _userCard(Map<String, dynamic> user) {
     final name = user['full_name'] ?? 'No Name';
@@ -407,15 +405,32 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+
+if (role != 'admin')
+ElevatedButton.icon(
+  style: ElevatedButton.styleFrom(
+    backgroundColor:
+        (user['blocked'] ?? false)
+            ? Colors.green
+            : Colors.red,
+    foregroundColor: Colors.white,
+  ),
+  onPressed: () => _toggleBlockUser(user),
+  icon: Icon(
+    (user['blocked'] ?? false)
+        ? Icons.lock_open
+        : Icons.block,
+  ),
+  label: Text(
+    (user['blocked'] ?? false)
+        ? 'Unblock'
+        : 'Block',
+  ),
+),
               ],
             ),
           ),
-          
-          if (role == 'user')
-          IconButton(
-           icon: const Icon(Icons.delete, color: Colors.red),
-           onPressed: () => deleteUser(user),
-         ),
         ],
       ),
     );

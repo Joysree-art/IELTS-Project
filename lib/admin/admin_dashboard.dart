@@ -42,30 +42,21 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
   Future<void> _loadDashboardData() async {
     if (!mounted) return;
-
     setState(() => isLoading = true);
 
     try {
       final usersData = await supabase.from('profiles').select('id, role');
       final writingData = await supabase.from('writing_questions').select('id');
       final speakingData = await supabase.from('speaking_topics').select('id');
-<<<<<<< HEAD
       final listeningData = await supabase.from('listening_tests').select('id');
+      final readingData = await supabase.from('reading_passages').select('id');
     
 
       final usersList = List<Map<String, dynamic>>.from(usersData as List);
       final writingList = List<Map<String, dynamic>>.from(writingData as List);
       final speakingList = List<Map<String, dynamic>>.from(speakingData as List);
       final listeningList = List<Map<String, dynamic>>.from(listeningData as List);
-=======
-      final readingData = await supabase.from('reading_passages').select('id');
-
-      final usersList = List<Map<String, dynamic>>.from(usersData as List);
-      final writingList = List<Map<String, dynamic>>.from(writingData as List);
-      final speakingList =
-          List<Map<String, dynamic>>.from(speakingData as List);
       final readingList = List<Map<String, dynamic>>.from(readingData as List);
->>>>>>> bc3e1dff4f907f6b2940dde786836e795104bfce
 
       if (!mounted) return;
 
@@ -80,20 +71,15 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
 
         writingQuestions = writingList.length;
         speakingTopics = speakingList.length;
-<<<<<<< HEAD
-        readingQuestions = 0;
-        listeningTests = listeningList.length;
-=======
         readingQuestions = readingList.length;
-        listeningQuestions = 0;
->>>>>>> bc3e1dff4f907f6b2940dde786836e795104bfce
+        listeningTests = listeningList.length;
       });
     } catch (e) {
       _showMessage("Dashboard load failed: ${e.toString()}");
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+    }
+
+    if (mounted) {
+      setState(() => isLoading = false);
     }
   }
 
@@ -365,7 +351,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                           mainAxisSpacing: 14,
                           childAspectRatio: 0.95,
                           children: [
-<<<<<<< HEAD
                             _statCard(
                               title: "Writing",
                               value: writingQuestions,
@@ -400,91 +385,6 @@ class _AdminDashboardPageState extends State<AdminDashboardPage> {
                                 const AdminListeningPage(),
                               ),
                             ),
-=======
-                            Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                              decoration: BoxDecoration(
-                                color: lightPrimary,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text(
-                                "Manage IELTSpire content, questions, users and results from here.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: primaryColor,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                            GridView.count(
-                              crossAxisCount: 2,
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              crossAxisSpacing: 14,
-                              mainAxisSpacing: 14,
-                              childAspectRatio: 1.15,
-                              children: [
-                                _statCard(
-                                  title: "Writing",
-                                  value: writingQuestions,
-                                  icon: Icons.edit_note,
-                                  onTap: () =>
-                                      _openPage(const AdminWritingPage()),
-                                ),
-                                _statCard(
-                                  title: "Reading",
-                                  value: readingQuestions,
-                                  icon: Icons.menu_book_outlined,
-                                  onTap: () =>
-                                      _openPage(const AdminReadingPage()),
-                                ),
-                                _statCard(
-                                  title: "Speaking",
-                                  value: speakingTopics,
-                                  icon: Icons.mic_none,
-                                  onTap: () =>
-                                      _openPage(const AdminSpeakingPage()),
-                                ),
-                                _statCard(
-                                  title: "Listening",
-                                  value: listeningQuestions,
-                                  icon: Icons.headphones_outlined,
-                                  onTap: () =>
-                                      _openPage(const AdminListeningPage()),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 26),
-                            const Text(
-                              "Admin Actions",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: textColor,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            _menuCard(
-                              title: "View Admin Users",
-                              subtitle: "View users and manage roles",
-                              icon: Icons.people_outline,
-                              onTap: () => _openPage(
-                                const AdminUsersPage(initialFilter: 'All'),
-                              ),
-                            ),
-                            _menuCard(
-                              title: "View Results",
-                              subtitle: "Check user test results and scores",
-                              icon: Icons.bar_chart_outlined,
-                              onTap: () => _openPage(const AdminResultsPage()),
-                            ),
-                            const SizedBox(height: 18),
-                            _logoutButton(),
-                            const SizedBox(height: 30),
->>>>>>> bc3e1dff4f907f6b2940dde786836e795104bfce
                           ],
                         ),
 

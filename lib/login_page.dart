@@ -115,7 +115,7 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final profileByEmail = await _supabase
           .from('profiles')
-          .select('id, email, role')
+          .select('id, email, role, blocked')
           .ilike('email', email)
           .maybeSingle();
 
@@ -140,11 +140,19 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
 
-        await _saveRememberedEmail(email);
+        final blocked = profileByEmail['blocked'] ?? false;
 
-        final role = (profileByEmail['role'] ?? 'user').toString();
+if (blocked == true) {
+  await _supabase.auth.signOut();
+  _showSnackBar('Your account has been blocked by admin');
+  return;
+}
 
-        _showSnackBar('Login successful');
+await _saveRememberedEmail(email);
+
+final role = (profileByEmail['role'] ?? 'user').toString();
+
+_showSnackBar('Login successful');
 
         Navigator.pushReplacement(
           context,
@@ -257,7 +265,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Practice smarter. Improve faster. Achieve higher.',
+                    'Blends IELTS with aspire and inspire',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
@@ -311,7 +319,7 @@ class _LoginPageState extends State<LoginPage> {
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: redPrimary,
-                        disabledBackgroundColor: const Color(0x59D62828),
+                        disabledBackgroundColor: redPrimary.withOpacity(0.6),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
