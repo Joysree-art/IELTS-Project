@@ -304,25 +304,25 @@ Align(
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: bgColor,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: textColor),
-        title: const Text(
-          "Manage Speaking",
-          style: TextStyle(
-            color: textColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _fetchTopics,
-            icon: const Icon(Icons.refresh, color: primaryColor),
-          ),
-        ],
+    appBar: AppBar(
+    title: const Text(
+    'Admin Speaking',
+    style: TextStyle(
+      fontWeight: FontWeight.bold,
       ),
+    ),
+    backgroundColor: Colors.red,
+    foregroundColor: Colors.white,
+    elevation: 0,
+    iconTheme: const IconThemeData(color: Colors.white),
+    actions: [
+      IconButton(
+        onPressed: _fetchTopics,
+        icon: const Icon(Icons.refresh),
+        color: Colors.white,
+        ),
+      ],
+    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _openTopicSheet(),
         backgroundColor: lightPrimary,
