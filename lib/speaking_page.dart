@@ -533,6 +533,11 @@ class _SpeakingPageState extends State<SpeakingPage> {
         _isPreparing ? _formatTime(_prepSeconds) : _formatTime(_speakSeconds);
 
     return Scaffold(
+      appBar: AppBar(
+       title: const Text("Speaking"),
+       backgroundColor: Colors.red,
+       foregroundColor: Colors.white,
+      ),
       backgroundColor: const Color(0xFFFFF8FA),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -540,15 +545,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "Speaking Practice",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF111827),
-                ),
-              ),
-              const SizedBox(height: 18),
+              
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
@@ -562,7 +559,7 @@ class _SpeakingPageState extends State<SpeakingPage> {
                   "Part 1: 5 minutes. Part 2: 1 minute preparation + 2 minutes speaking. Part 3: 5 minutes discussion.",
                   style: TextStyle(
                     fontSize: 15,
-                    color: Color(0xFFB42350),
+                    color: Color(0xFFE60046),
                     height: 1.5,
                   ),
                 ),
