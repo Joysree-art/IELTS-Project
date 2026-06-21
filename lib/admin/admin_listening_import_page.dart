@@ -552,7 +552,11 @@ if (sections.isNotEmpty) ...[
               return Card(
                 margin: const EdgeInsets.only(bottom: 10),
                 child: ListTile(
-                  title: Text('Q${q['question_no']}. ${q['question_text']}'),
+                  title: Text(
+  'Q${q['question_no']}. ${q['question_text']}',
+  maxLines: 2,
+  overflow: TextOverflow.ellipsis,
+),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -563,26 +567,18 @@ if (sections.isNotEmpty) ...[
                       Text('Answer: ${q['correct_answer']}'),
                     ],
                   ),
-                  trailing: SizedBox(
-                  width: 90,
-                  child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                 children: [
-      IconButton(
-        constraints: const BoxConstraints(),
-        padding: EdgeInsets.zero,
-        icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-        onPressed: () => startEditQuestion(q),
-      ),
-      const SizedBox(width: 8),
-      IconButton(
-        constraints: const BoxConstraints(),
-        padding: EdgeInsets.zero,
-        icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-        onPressed: () => deleteQuestion(q['id']),
-      ),
-    ],
-  ),
+                  trailing: Row(
+  mainAxisSize: MainAxisSize.min,
+  children: [
+    IconButton(
+      icon: const Icon(Icons.edit, color: Colors.blue),
+      onPressed: () => startEditQuestion(q),
+    ),
+    IconButton(
+      icon: const Icon(Icons.delete, color: Colors.red),
+      onPressed: () => deleteQuestion(q['id']),
+    ),
+  ],
 ),
                 ),
               );

@@ -389,7 +389,7 @@ class _StatBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFF1F2937),
+          color: const Color.fromARGB(255, 224, 50, 50),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -397,7 +397,7 @@ class _StatBox extends StatelessWidget {
             Text(
               value,
               style: const TextStyle(
-                color: Color(0xFF38BDF8),
+                color: Color.fromARGB(255, 248, 251, 252),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),

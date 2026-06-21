@@ -537,7 +537,12 @@ final overall = (rawOverall * 2).round() / 2;
         backgroundColor: Colors.red,
         foregroundColor: Colors.white,
         title: const Text('Writing Test'),
-        automaticallyImplyLeading: !submitted,
+        leading: IconButton(
+  icon: const Icon(Icons.arrow_back),
+  onPressed: () {
+    Navigator.pop(context);
+  },
+),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 14),
