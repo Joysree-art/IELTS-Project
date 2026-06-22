@@ -77,13 +77,6 @@ class _LoginPageState extends State<LoginPage> {
       _rememberedEmail = email;
       _autoUncheckedRememberMe = false;
     } else {
-      /*
-        If Remember Me was automatically unchecked because user typed
-        another account email, we will NOT overwrite or remove the old
-        remembered email.
-
-        If user manually unticks Remember Me and logs in, then we remove it.
-      */
       if (!_autoUncheckedRememberMe) {
         await prefs.remove('remembered_email');
         _rememberedEmail = null;
@@ -142,17 +135,17 @@ class _LoginPageState extends State<LoginPage> {
 
         final blocked = profileByEmail['blocked'] ?? false;
 
-if (blocked == true) {
-  await _supabase.auth.signOut();
-  _showSnackBar('Your account has been blocked by admin');
-  return;
-}
+        if (blocked == true) {
+          await _supabase.auth.signOut();
+          _showSnackBar('Your account has been blocked by admin');
+          return;
+        }
 
-await _saveRememberedEmail(email);
+        await _saveRememberedEmail(email);
 
-final role = (profileByEmail['role'] ?? 'user').toString();
+        final role = (profileByEmail['role'] ?? 'user').toString();
 
-_showSnackBar('Login successful');
+        _showSnackBar('Login successful');
 
         Navigator.pushReplacement(
           context,
@@ -265,7 +258,7 @@ _showSnackBar('Login successful');
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Blends IELTS with aspire and inspire',
+                    'Practice smarter, achieve higher bands',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.grey),
                   ),
